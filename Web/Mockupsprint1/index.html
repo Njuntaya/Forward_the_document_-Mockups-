@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบคำร้องขอเอกสารออนไลน์ - มหาวิทยาลัย</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header / Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="logo-icon">📄</div>
+        <div>
+          <div class="brand-title">ระบบยื่นคำร้องขอเอกสารการศึกษา</div>
+          <div class="brand-subtitle">Student Document Request System (Mockup)</div>
+        </div>
+      </div>
+      <div id="user-profile-bar" class="user-bar hidden">
+        <span id="display-username" class="user-badge">ผู้ใช้งาน</span>
+        <button id="btn-logout" class="btn-sm btn-outline">ออกจากระบบ</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- VIEW 1: Login View -->
+    <section id="view-login" class="view-section">
+      <div class="login-card">
+        <div class="login-header">
+          <h2>เข้าสู่ระบบ (Mockup Login)</h2>
+          <p>เข้าใช้งานระบบเพื่อยื่นคำร้องหรือจัดการเอกสาร</p>
+        </div>
+        
+        <div class="role-selector">
+          <button type="button" class="role-btn active" data-role="student">👨‍🎓 นักศึกษา</button>
+          <button type="button" class="role-btn" data-role="officer">👨‍💼 เจ้าหน้าที่ทะเบียน</button>
+        </div>
+
+        <form id="form-login" class="form-container">
+          <div class="form-group">
+            <label for="username" id="label-username">รหัสนักศึกษา</label>
+            <input type="text" id="username" class="input-field" placeholder="กรอกรหัสนักศึกษา" required>
+          </div>
+          <div class="form-group">
+            <label for="password">รหัสผ่าน</label>
+            <input type="password" id="password" class="input-field" placeholder="กรอกรหัสผ่าน" required>
+          </div>
+          <button type="submit" class="btn btn-primary full-width">เข้าสู่ระบบ</button>
+          <p class="hint-text">* โหมดจำลอง (Mockup): สามารถพิมพ์ข้อมูลเพื่อเข้าสู่ระบบได้เลย</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 2: Student View -->
+    <section id="view-student" class="view-section hidden">
+      <div class="container">
+        <div class="page-title-area">
+          <h2>ยื่นคำร้องขอเอกสารสำคัญทางการศึกษา</h2>
+          <p>กรอกข้อมูลเพื่อขอเอกสารรับรอง ทรานสคริปต์ หรือเอกสารอื่นๆ</p>
+        </div>
+
+        <div class="grid-2col">
+          <!-- Request Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📝 แบบฟอร์มยื่นคำร้อง</h3>
+            </div>
+            <form id="form-request" class="form-container">
+              <div class="form-group">
+                <label for="student-name">ชื่อ - นามสกุล นักศึกษา</label>
+                <input type="text" id="student-name" class="input-field" placeholder="กรอกชื่อ - นามสกุล" required>
+              </div>
+              <div class="form-group">
+                <label for="doc-type">ประเภทเอกสารที่ต้องการขอ</label>
+                <select id="doc-type" class="input-field" required>
+                  <option value="" disabled selected>-- เลือกประเภทเอกสาร --</option>
+                  <option value="หนังสือรับรองสภาพการเป็นนักศึกษา (ภาษาไทย)">หนังสือรับรองสภาพการเป็นนักศึกษา (ภาษาไทย)</option>
+                  <option value="หนังสือรับรองสภาพการเป็นนักศึกษา (ภาษาอังกฤษ)">หนังสือรับรองสภาพการเป็นนักศึกษา (ภาษาอังกฤษ)</option>
+                  <option value="ใบรายงานผลการศึกษา (Transcript)">ใบรายงานผลการศึกษา (Transcript)</option>
+                  <option value="หนังสือรับรองความประพฤติ">หนังสือรับรองความประพฤติ</option>
+                  <option value="หนังสือขอผ่อนผันการเกณฑ์ทหาร">หนังสือขอผ่อนผันการเกณฑ์ทหาร</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="doc-qty">จำนวนฉบับ</label>
+                <input type="number" id="doc-qty" class="input-field" min="1" max="5" value="1" required>
+              </div>
+              <div class="form-group">
+                <label for="doc-purpose">เหตุผล / วัตถุประสงค์ในการขอ</label>
+                <textarea id="doc-purpose" class="input-field" rows="3" placeholder="ระบุเหตุผล เช่น ใช้สมัครงาน, ยื่นขอทุนการศึกษา..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="delivery-type">รูปแบบการรับเอกสาร</label>
+                <select id="delivery-type" class="input-field">
+                  <option value="ไฟล์ดิจิทัล PDF (พร้อม QR Code ตรวจสอบ)">ไฟล์ดิจิทัล PDF (พร้อม QR Code ตรวจสอบ)</option>
+                  <option value="รับด้วยตนเองที่สำนักทะเบียน">รับด้วยตนเองที่สำนักทะเบียน</option>
+                  <option value="จัดส่งทางไปรษณีย์ EMS">จัดส่งทางไปรษณีย์ EMS</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary full-width">ส่งคำร้องขอเอกสาร</button>
+            </form>
+          </div>
+
+          <!-- History / Tracking -->
+          <div class="card">
+            <div class="card-header">
+              <h3>📋 ประวัติการยื่นคำร้องของฉัน</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>เลขที่คำร้อง</th>
+                    <th>ประเภทเอกสาร</th>
+                    <th>วันที่ยื่น</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody id="student-history-table">
+                  <!-- Injected by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: Officer Dashboard View -->
+    <section id="view-officer" class="view-section hidden">
+      <div class="container">
+        <div class="dashboard-header">
+          <div>
+            <h2>ระบบจัดการคำร้องสำหรับเจ้าหน้าที่ทะเบียน</h2>
+            <p>ตรวจสอบ อนุมัติ หรือปฏิเสธคำร้องขอเอกสารของนักศึกษา</p>
+          </div>
+          <div class="stat-summary">
+            <div class="stat-box">
+              <span class="stat-num" id="stat-pending">0</span>
+              <span class="stat-label">รอตรวจสอบ</span>
+            </div>
+            <div class="stat-box stat-approved">
+              <span class="stat-num" id="stat-approved">0</span>
+              <span class="stat-label">อนุมัติแล้ว</span>
+            </div>
+            <div class="stat-box stat-rejected">
+              <span class="stat-num" id="stat-rejected">0</span>
+              <span class="stat-label">ปฏิเสธ</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-card">
+          <div class="filter-group">
+            <label>กรองตามสถานะ:</label>
+            <select id="filter-status" class="input-field select-filter">
+              <option value="ALL">ทั้งหมด</option>
+              <option value="PENDING">รอตรวจสอบ (Pending)</option>
+              <option value="APPROVED">อนุมัติแล้ว (Approved)</option>
+              <option value="REJECTED">ปฏิเสธ (Rejected)</option>
+            </select>
+          </div>
+          <button id="btn-reset-data" class="btn-sm btn-outline">ล้างข้อมูลทั้งหมด</button>
+        </div>
+
+        <!-- Request Management Table -->
+        <div class="card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>เลขที่คำร้อง</th>
+                  <th>ผู้ยื่นคำร้อง</th>
+                  <th>ประเภทเอกสาร</th>
+                  <th>จำนวน</th>
+                  <th>วันที่ยื่น</th>
+                  <th>สถานะ</th>
+                  <th>การดำเนินการ</th>
+                </tr>
+              </thead>
+              <tbody id="officer-table-body">
+                <!-- Injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for Reject Reason -->
+  <div id="modal-reject" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3>ระบุเหตุผลในการปฏิเสธคำร้อง</h3>
+      <p id="modal-req-id" class="text-muted">เลขที่คำร้อง: #DOC-000</p>
+      <div class="form-group">
+        <label for="reject-reason">เหตุผล / ข้อความแจ้งนักศึกษา:</label>
+        <textarea id="reject-reason" class="input-field" rows="3" placeholder="เช่น ค้างชำระค่าธรรมเนียม, ข้อมูลไม่ถูกต้อง..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-cancel-reject" class="btn btn-outline">ยกเลิก</button>
+        <button id="btn-confirm-reject" class="btn btn-danger">ยืนยันการปฏิเสธ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
