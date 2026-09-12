@@ -1,64 +1,57 @@
-import { useState } from "react";
-import axios from "axios";
-import LoginUI from "./components/auth/LoginUi";
+import { useState } from 'react';
+import axios from 'axios';
+import LoginUI from './components/auth/LoginUi'; // หรือตำแหน่ง LoginUI ของคุณ
+import AdminLandingPage from './components/AdminLandingPage';
 
 export default function MainApp() {
-  const [role, setRole] = useState("user");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [role, setRole] = useState('admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
+  const [error, setError] = useState('');
+
+  const [currentAdmin, setCurrentAdmin] = useState(() => {
+    const savedAdmin = localStorage.getItem('admin_user');
+    return savedAdmin ? JSON.parse(savedAdmin) : null;
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
 
     if (!username || !password) {
-      setError("กรุณากรอกรหัสนักศึกษาและรหัสผ่าน");
+      setError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
       return;
     }
 
     setLoading(true);
 
     try {
-      // สำหรับฝั่งนักศึกษา บังคับ role เป็น 'user' และ allowedRole เป็น 'user'
-      const res = await axios.post("http://localhost:5000/api/login", {
+      const res = await axios.post('http://localhost:5000/api/login', {
         username: username.trim(),
         password: password.trim(),
-        role: "user",
-        allowedRole: "user",
+        role: 'admin',
+        allowedRole: 'admin'
       });
 
       setLoading(false);
       if (res.data.success) {
-        setCurrentUser(res.data.user);
+        localStorage.setItem('admin_user', JSON.stringify(res.data.user));
+        setCurrentAdmin(res.data.user);
       }
     } catch (err) {
       setLoading(false);
-      setError(
-        err.response?.data?.message ||
-          "รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง"
-      );
+      setError(err.response?.data?.message || 'ชื่อผู้ใช้หรือรหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง');
     }
   };
 
-  if (currentUser) {
-    return (
-      <div className="min-h-screen p-8 flex flex-col items-center justify-center bg-slate-100">
-        <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold text-[#6b3a1f]">✅ เข้าสู่ระบบสำเร็จ</h2>
-          <p className="mt-2 text-slate-600">ยินดีต้อนรับ: <b>{currentUser.name}</b></p>
-          <p className="text-sm text-slate-500">รหัสนักศึกษา: {currentUser.username}</p>
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="mt-6 w-full py-2.5 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 shadow-md transition-colors cursor-pointer"
-          >
-            ออกจากระบบ
-          </button>
-        </div>
-      </div>
-    );
+  const handleLogout = () => {
+    localStorage.removeItem('admin_user');
+    setCurrentAdmin(null);
+  };
+
+  if (currentAdmin) {
+    return <AdminLandingPage user={currentAdmin} onLogout={handleLogout} />;
   }
 
   return (
