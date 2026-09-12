@@ -3,15 +3,18 @@
 ระบบยื่นคำร้องออนไลน์ของนักศึกษา (Student Online Petition System)
 
 ---
+> นี่คือแบบจำลองไม่ใช่ข้อมูลจริงตามช่วงเวลาใช้เพื่อการศึกษาเท่านั้น
+This is a simulation for educational purposes and does not reflect real-time or current data
 
 ## 1. ข้อมูลควบคุมเอกสาร (Document Control)
+
 
 | หัวข้อ | รายละเอียด |
 |---|---|
 | ชื่อโครงการ (Project Name) | ระบบยื่นคำร้องออนไลน์ของนักศึกษา (Student Online Petition System) |
 | ชื่อเอกสาร (Document Name) | QA Test Plan & Test Case Specification — Sprint 2 |
 | เวอร์ชันเอกสาร (Version) | 1.0 |
-| วันที่จัดทำ (Date) | 12 กันยายน 2569 |
+| วันที่จัดทำ (Date) | 9 พฤศจิกายน 2569 |
 | จัดทำโดย (Prepared By) | Tester / QA Team |
 | สถานะเอกสาร (Status) | Draft |
 
@@ -19,7 +22,7 @@
 
 | เวอร์ชัน | วันที่ | รายละเอียดการแก้ไข | ผู้แก้ไข |
 |---|---|---|---|
-| 1.0 | 09/09/2569 | จัดทำเอกสารฉบับแรก ครอบคลุมขอบเขตงาน Sprint 2 (FR-01, FR-02) | QA Team |
+| 1.0 | 09/11/2569 | จัดทำเอกสารฉบับแรก ครอบคลุมขอบเขตงาน Sprint 2 (FR-01, FR-02) | QA Team |
 
 ## 3. วัตถุประสงค์ (Purpose)
 
@@ -102,6 +105,7 @@
 
 | บทบาท (Role) | ชื่อ-นามสกุล | วันที่ |
 |---|---|---|
-| จัดทำโดย (Tester / QA) | Kit.k | 09/09/2569 |
-| ตรวจสอบโดย (Project Manager) | Aungkanr.S | 10/09/2569 |
-| อนุมัติโดย (Product Owner / อาจารย์ที่ปรึกษา) | Sunya.U | - |
+| จัดทำโดย (Tester / QA) | Kit.k | 09/11/2569 |
+| ตรวจสอบโดย (Project Manager) | Aungkanr.S | 10/11/2569 |
+| อนุมัติโดย (Product Owner / อาจารย์ที่ปรึกษา) | Sunya.U | 17/11/2569 |
+
