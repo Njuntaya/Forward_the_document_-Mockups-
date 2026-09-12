@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const USERS_FILE = path.join(__dirname, 'users.json');
 const REQUESTS_FILE = path.join(__dirname, 'requests.json');
 
-// ข้อมูลตั้งต้นสำหรับสร้างไฟล์ JSON อัตโนมัติหากยังไม่มีไฟล์
+// ข้อมูลตั้งต้นสำหรับระบบ
 const DEFAULT_USERS = [
   { id: 1, username: '660610001', password: 'password123', name: 'นายกิตติศักดิ์ ใจดี', role: 'user' },
   { id: 2, username: 'admin01', password: 'password123', name: 'สมชาย เจ้าหน้าที่', role: 'admin' }
@@ -36,11 +36,11 @@ const readJson = (filePath) => {
   try {
     if (!fs.existsSync(filePath)) {
       if (filePath.includes('users.json')) {
-        fs.writeFileSync(filePath, JSON.stringify(DEFAULT_USERS, null, 2), 'utf8');
+        writeJson(filePath, DEFAULT_USERS);
         return DEFAULT_USERS;
       }
       if (filePath.includes('requests.json')) {
-        fs.writeFileSync(filePath, JSON.stringify(DEFAULT_REQUESTS, null, 2), 'utf8');
+        writeJson(filePath, DEFAULT_REQUESTS);
         return DEFAULT_REQUESTS;
       }
       return [];
@@ -49,7 +49,7 @@ const readJson = (filePath) => {
     const parsed = JSON.parse(data || '[]');
 
     if (filePath.includes('users.json') && parsed.length === 0) {
-      fs.writeFileSync(filePath, JSON.stringify(DEFAULT_USERS, null, 2), 'utf8');
+      writeJson(filePath, DEFAULT_USERS);
       return DEFAULT_USERS;
     }
     return parsed;
@@ -59,10 +59,34 @@ const readJson = (filePath) => {
   }
 };
 
-// ฟังก์ชันสำหรับเขียนบันทึกข้อมูลลงไฟล์ JSON
+// ฟังก์ชันสำหรับเขียนและซิงค์ข้อมูลลงไฟล์ JSON ทั้ง 3 โฟลเดอร์ (Backend, User, Admin)
 const writeJson = (filePath, data) => {
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    const jsonString = JSON.stringify(data, null, 2);
+
+    // 1. เขียนลง FeatureBackend
+    fs.writeFileSync(filePath, jsonString, 'utf8');
+
+    // 2. ถ้าเป็นไฟล์ users.json ให้ซิงค์ไปยัง FeatureUser และ FeatureAdmin ด้วย
+    if (filePath.includes('users.json')) {
+      const userPathSrc = path.join(__dirname, '../FeatureUser/src/users.json');
+      const userPathRoot = path.join(__dirname, '../FeatureUser/users.json');
+      const adminPathSrc = path.join(__dirname, '../FeatureAdmin/src/users.json');
+      const adminPathRoot = path.join(__dirname, '../FeatureAdmin/users.json');
+
+      const targetPaths = [userPathSrc, userPathRoot, adminPathSrc, adminPathRoot];
+
+      targetPaths.forEach((tPath) => {
+        try {
+          const dir = path.dirname(tPath);
+          if (fs.existsSync(dir)) {
+            fs.writeFileSync(tPath, jsonString, 'utf8');
+          }
+        } catch (e) {
+          // ข้ามหากไม่พบไดเรกทอรี
+        }
+      });
+    }
   } catch (err) {
     console.error(`Error writing ${filePath}:`, err);
   }
@@ -90,7 +114,8 @@ app.post('/api/register', (req, res) => {
   }
 
   const users = readJson(USERS_FILE);
-  const existingUser = users.find(u => u.username === studentId);
+  const cleanStudentId = String(studentId).trim();
+  const existingUser = users.find(u => u.username === cleanStudentId);
 
   if (existingUser) {
     return res.status(400).json({ success: false, message: 'รหัสนักศึกษานี้มีในระบบแล้ว' });
@@ -98,9 +123,9 @@ app.post('/api/register', (req, res) => {
 
   const newUser = {
     id: users.length > 0 ? users[users.length - 1].id + 1 : 1,
-    username: studentId,
-    password: password,
-    name: name,
+    username: cleanStudentId,
+    password: String(password).trim(),
+    name: String(name).trim(),
     role: 'user'
   };
 
@@ -110,13 +135,38 @@ app.post('/api/register', (req, res) => {
   res.json({ success: true, message: 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ' });
 });
 
+// API: รีเซ็ตรหัสผ่านนักศึกษา
+app.post('/api/reset-password', (req, res) => {
+  const { studentId, newPassword } = req.body;
+
+  if (!studentId || !newPassword) {
+    return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+  }
+
+  const users = readJson(USERS_FILE);
+  const cleanStudentId = String(studentId).trim();
+  const userIndex = users.findIndex(u => u.username === cleanStudentId && u.role === 'user');
+
+  if (userIndex === -1) {
+    return res.status(404).json({ success: false, message: 'ไม่พบรหัสนักศึกษานี้ในระบบ' });
+  }
+
+  users[userIndex].password = String(newPassword).trim();
+  writeJson(USERS_FILE, users);
+
+  res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่' });
+});
+
 // API: เข้าสู่ระบบ (Login Endpoint)
 app.post('/api/login', (req, res) => {
   const { username, password, role, allowedRole } = req.body;
   const users = readJson(USERS_FILE);
 
+  const cleanUsername = String(username).trim();
+  const cleanPassword = String(password).trim();
+
   const foundUser = users.find(
-    u => u.username === username && u.password === password
+    u => u.username === cleanUsername && u.password === cleanPassword
   );
 
   if (!foundUser) {

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import axios from 'axios';
+import RegisterModal from './RegisterModal';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
-// โลโก้มหาวิทยาลัย (SVG)
+// 1. โลโก้มหาวิทยาลัย (SVG)
 function UniversityLogo() {
   return (
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="University logo">
@@ -28,7 +29,7 @@ function UniversityLogo() {
   );
 }
 
-// ไอคอนเปิด/ปิด ตา สำหรับรหัสผ่าน
+// 2. ไอคอนเปิด/ปิด ตา สำหรับรหัสผ่าน
 function EyeIcon({ open }) {
   return open ? (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -43,7 +44,7 @@ function EyeIcon({ open }) {
   );
 }
 
-// ช่องกรอกข้อมูล Input Field (รองรับการ Copy-Paste และ Auto Focus)
+// 3. ช่องกรอกข้อมูล Input Field (รองรับ Copy-Paste และ Auto Focus)
 function InputField({ label, labelTh, type = "text", placeholder, value, onChange, icon, autoComplete }) {
   const [showPass, setShowPass] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -95,51 +96,11 @@ function InputField({ label, labelTh, type = "text", placeholder, value, onChang
   );
 }
 
-// Component หลัก LoginUI
+// 4. Component หลัก LoginUI
 export default function LoginUI({ role, setRole, username, setUsername, password, setPassword, loading, error, handleSubmit }) {
+  // ควบคุมการเปิด/ปิด Pop-up Modal
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [regStudentId, setRegStudentId] = useState('');
-  const [regName, setRegName] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regError, setRegError] = useState('');
-  const [regSuccess, setRegSuccess] = useState('');
-  const [regLoading, setRegLoading] = useState(false);
-
-  // ฟังก์ชันสมัครสมาชิก
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setRegError('');
-    setRegSuccess('');
-
-    if (!regStudentId || !regName || !regPassword) {
-      setRegError('กรุณากรอกข้อมูลให้ครบทุกช่อง');
-      return;
-    }
-
-    setRegLoading(true);
-    try {
-      const res = await axios.post('http://localhost:5000/api/register', {
-        studentId: regStudentId,
-        name: regName,
-        password: regPassword
-      });
-
-      setRegLoading(false);
-      if (res.data.success) {
-        setRegSuccess(res.data.message);
-        setTimeout(() => {
-          setShowRegisterModal(false);
-          setRegStudentId('');
-          setRegName('');
-          setRegPassword('');
-          setRegSuccess('');
-        }, 1500);
-      }
-    } catch (err) {
-      setRegLoading(false);
-      setRegError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
-    }
-  };
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   return (
     <div className="login-container">
@@ -279,7 +240,15 @@ export default function LoginUI({ role, setRole, username, setUsername, password
                 <input type="checkbox" className="rounded" style={{ accentColor: "#8b4a24", width: 15, height: 15 }} />
                 <span style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>จดจำการเข้าสู่ระบบ</span>
               </label>
-              <a href="#" style={{ fontSize: "0.8rem", color: "#6b3a1f", fontWeight: 600, textDecoration: "none" }}>ลืมรหัสผ่าน?</a>
+
+              {/* ปุ่มเปิด Pop-up ลืมรหัสผ่าน */}
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                style={{ fontSize: "0.8rem", color: "#6b3a1f", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}
+              >
+                ลืมรหัสผ่าน?
+              </button>
             </div>
 
             <button
@@ -290,6 +259,7 @@ export default function LoginUI({ role, setRole, username, setUsername, password
               {loading ? "กำลังเข้าสู่ระบบ..." : `เข้าสู่ระบบ (${role === "user" ? "นักศึกษา" : "เจ้าหน้าที่"})`}
             </button>
 
+            {/* ปุ่มเปิด Pop-up สมัครสมาชิกใหม่ (แสดงเฉพาะแท็บนักศึกษา) */}
             {role === "user" && (
               <div className="text-center pt-2 border-t border-slate-100">
                 <p className="text-xs text-slate-500">
@@ -308,79 +278,16 @@ export default function LoginUI({ role, setRole, username, setUsername, password
         </div>
       </div>
 
-      {/* ===== Pop-up Modal สมัครสมาชิกนักศึกษา ===== */}
-      {showRegisterModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
-              <h3 className="text-lg font-bold text-[#6b3a1f]">📝 สมัครสมาชิกนักศึกษา</h3>
-              <button
-                onClick={() => setShowRegisterModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-xl bg-transparent border-none cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ===== 5. โมดอลสมัครสมาชิก และ โมดอลลืมรหัสผ่าน ===== */}
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+      />
 
-            <form onSubmit={handleRegister} className="flex flex-col gap-4">
-              <InputField
-                label="รหัสนักศึกษา"
-                labelTh="Student ID"
-                placeholder="เช่น 660610002"
-                value={regStudentId}
-                onChange={setRegStudentId}
-                icon={<span>👨‍🎓</span>}
-              />
-              <InputField
-                label="ชื่อ - นามสกุล"
-                labelTh="Full Name"
-                placeholder="เช่น นายกิตติศักดิ์ ใจดี"
-                value={regName}
-                onChange={setRegName}
-                icon={<span>👤</span>}
-              />
-              <InputField
-                label="กำหนดรหัสผ่าน"
-                labelTh="Password"
-                type="password"
-                placeholder="กรอกรหัสผ่านอย่างน้อย 6 ตัวอักษร"
-                value={regPassword}
-                onChange={setRegPassword}
-                icon={<span>🔒</span>}
-              />
-
-              {regError && (
-                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl font-medium border border-red-200">
-                  ⚠️ {regError}
-                </div>
-              )}
-
-              {regSuccess && (
-                <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-xl font-medium border border-emerald-200">
-                  ✅ {regSuccess}
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  disabled={regLoading}
-                  className="flex-1 py-2.5 rounded-xl bg-[#6b3a1f] text-white font-bold hover:bg-[#8b4a24] transition-colors disabled:bg-slate-300 cursor-pointer"
-                >
-                  {regLoading ? "กำลังลงทะเบียน..." : "ลงทะเบียน"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ForgotPasswordModal
+        isOpen={showForgotModal}
+        onClose={() => setShowForgotModal(false)}
+      />
     </div>
   );
 }
