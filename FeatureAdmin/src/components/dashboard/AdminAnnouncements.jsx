@@ -1,9 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AdminAnnouncements({ announcements = [], socket, user }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [localAnnouncements, setLocalAnnouncements] = useState(announcements);
+
+  // ซิงค์ props กับ local state
+  useEffect(() => {
+    setLocalAnnouncements(announcements);
+  }, [announcements]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    socket.on('announcements_updated', (data) => {
+      setLocalAnnouncements(data || []);
+    });
+
+    return () => {
+      socket.off('announcements_updated');
+    };
+  }, [socket]);
 
   const handleCreateAnnouncement = (e) => {
     e.preventDefault();
@@ -35,7 +53,7 @@ export default function AdminAnnouncements({ announcements = [], socket, user })
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-extrabold text-slate-800">📢 จัดการประกาศประชาสัมพันธ์</h2>
-        <p className="text-xs text-slate-400 mt-0.5">เพิ่มประกาศ ข่าวสาร หรือแจ้งเตือนให้นักศึกษาเห็นที่หน้าแรก</p>
+        <p className="text-xs text-slate-400 mt-0.5">เพิ่มประกาศ ข่าวสาร หรือแจ้งเตือนให้นักศึกษาเห็นที่หน้าแรกแบบเรียลไทม์</p>
       </div>
 
       {/* ฟอร์มเขียนประกาศ */}
@@ -79,15 +97,15 @@ export default function AdminAnnouncements({ announcements = [], socket, user })
         </form>
       </div>
 
-      {/* รายการประกาศทั้งหมดที่มีอยู่ */}
+      {/* รายการประกาศทั้งหมด */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-slate-800">📜 ประกาศที่มีอยู่ในระบบ ({announcements.length})</h3>
+        <h3 className="text-sm font-bold text-slate-800">📜 ประกาศที่มีอยู่ในระบบ ({localAnnouncements.length})</h3>
 
         <div className="space-y-3">
-          {announcements.length === 0 ? (
+          {localAnnouncements.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-6">ยังไม่มีประกาศประชาสัมพันธ์ในระบบ</p>
           ) : (
-            announcements.map((ann) => (
+            localAnnouncements.map((ann) => (
               <div key={ann.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">

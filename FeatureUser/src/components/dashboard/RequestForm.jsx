@@ -1,45 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function RequestForm({ user, socket, onSuccess }) {
-  const [category, setCategory] = useState('doc');
-
-  // ข้อมูลพื้นฐาน
+export default function RequestForm({ user, socket, onSuccess, editData }) {
+  const [requestCategory, setRequestCategory] = useState('doc'); // 'doc' = เอกสารการศึกษา, 'building' = ปรับปรุงอาคาร
+  
+  // States สำหรับเอกสารการศึกษา
+  const [docType, setDocType] = useState('หนังสือรับรองการเป็นนักศึกษา (ภาษาไทย)');
+  const [copies, setCopies] = useState(1);
+  const [purpose, setPurpose] = useState('');
+  const [note, setNote] = useState('');
   const [faculty, setFaculty] = useState('วิศวกรรมศาสตร์');
   const [yearLevel, setYearLevel] = useState('ปี 1');
   const [gpax, setGpax] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-
-  // หมวดเอกสาร
-  const [docType, setDocType] = useState('หนังสือรับรองการเป็นนักศึกษา');
-  const [language, setLanguage] = useState('th');
-  const [copies, setCopies] = useState(1);
-  const [purpose, setPurpose] = useState('');
-  const [note, setNote] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState('self'); // 'self' | 'postal' | 'edoc'
+  const [deliveryMethod, setDeliveryMethod] = useState('self');
   const [address, setAddress] = useState('');
-  const [slipImage, setSlipImage] = useState(null); // รูปสลิปโอนเงิน
+  const [slipImage, setSlipImage] = useState('');
 
-  // หมวดซ่อมแซมอาคาร
-  const [buildingName, setBuildingName] = useState('อาคารเรียนรวม CB');
+  // States สำหรับแจ้งซ่อมปรับปรุงอาคาร
+  const [repairCategory, setRepairCategory] = useState('ไฟฟ้า');
+  const [buildingName, setBuildingName] = useState('อาคาร 1 (วิศวกรรมศาสตร์)');
   const [roomNumber, setRoomNumber] = useState('');
-  const [repairCategory, setRepairCategory] = useState('งานระบบไฟฟ้า/ปลั๊กไฟ');
-  const [urgency, setUrgency] = useState('normal'); // 'low' | 'normal' | 'urgent' | 'critical'
   const [issueDetail, setIssueDetail] = useState('');
-  const [imagePreview, setImagePreview] = useState(null); // รูปความเสียหาย
 
-  const [submitting, setSubmitting] = useState(false);
+  const [fieldFeedbacks, setFieldFeedbacks] = useState({});
 
-  // ฟังก์ชันแปลงรูปภาพเป็น Base64
-  const handleFileChange = (e, setPreviewState) => {
+  useEffect(() => {
+    if (editData) {
+      if (editData.category === 'building' || editData.docType?.includes('ปรับปรุงอาคาร')) {
+        setRequestCategory('building');
+        setRepairCategory(editData.repairCategory || 'ไฟฟ้า');
+        setBuildingName(editData.buildingName || 'อาคาร 1');
+        setRoomNumber(editData.roomNumber || '');
+        setIssueDetail(editData.issueDetail || '');
+      } else {
+        setRequestCategory('doc');
+        setDocType(editData.docType || 'หนังสือรับรองการเป็นนักศึกษา (ภาษาไทย)');
+        setCopies(editData.copies || 1);
+        setPurpose(editData.purpose || '');
+        setNote(editData.note || '');
+        setFaculty(editData.faculty || 'วิศวกรรมศาสตร์');
+        setYearLevel(editData.yearLevel || 'ปี 1');
+        setGpax(editData.gpax || '');
+      }
+      setPhone(editData.phone || '');
+      setEmail(editData.email || '');
+      setDeliveryMethod(editData.deliveryMethod || 'self');
+      setAddress(editData.address || '');
+      setSlipImage(editData.slipImage || editData.imageUrl || '');
+      setFieldFeedbacks(editData.fieldFeedbacks || {});
+    }
+  }, [editData]);
+
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('ขนาดไฟล์รูปภาพต้องไม่เกิน 5MB');
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => setPreviewState(reader.result);
+      reader.onloadend = () => {
+        setSlipImage(reader.result);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -47,295 +66,359 @@ export default function RequestForm({ user, socket, onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!phone.trim()) return alert('กรุณากรอกเบอร์โทรศัพท์สำหรับติดต่อ');
+    // 🌟 ดึงข้อมูล User ให้ชัวร์ที่สุด (ป้องกันกรณี user เป็น null หรือไม่มี username)
+    const currentStudentId = String(user?.username || '5555555555').trim();
+    const currentStudentName = String(user?.name || 'นักศึกษา').trim();
 
-    if (category === 'doc') {
-      if (deliveryMethod === 'postal' && !address.trim()) return alert('กรุณากรอกที่อยู่สำหรับจัดส่ง EMS');
-      if (deliveryMethod === 'edoc' && !email.trim()) return alert('กรุณากรอกอีเมลสำหรับรับไฟล์ E-Document');
-    }
-
-    if (category === 'building' && (!roomNumber.trim() || !issueDetail.trim())) {
-      return alert('กรุณากรอกเลขห้องและรายละเอียดความเสียหาย');
-    }
-
-    setSubmitting(true);
-
-    const requestData = {
-      studentId: String(user?.username || '').trim(),
-      studentName: user?.name || 'นักศึกษา',
-      faculty,
-      yearLevel,
-      gpax: gpax.trim() || '-',
-      phone: phone.trim(),
-      email: email.trim() || '-',
-      category,
-
-      // ข้อมูลเอกสาร
-      docType: category === 'doc' ? `${docType} (${language === 'th' ? 'ภาษาไทย' : 'ภาษาอังกฤษ'})` : 'คำร้องแจ้งปรับปรุง/ซ่อมแซมอาคารเรียน',
-      copies: category === 'doc' ? Number(copies) : 1,
-      purpose: category === 'doc' ? purpose.trim() : `ซ่อมแซม: ${buildingName}`,
-      note: note.trim() || '-',
-      deliveryMethod: category === 'doc' ? deliveryMethod : 'N/A',
-      address: category === 'doc' && deliveryMethod === 'postal' ? address.trim() : '-',
-      slipImage: category === 'doc' ? slipImage : null,
-
-      // ข้อมูลซ่อมอาคาร
-      buildingName: category === 'building' ? buildingName : '',
-      roomNumber: category === 'building' ? roomNumber.trim() : '',
-      repairCategory: category === 'building' ? repairCategory : '',
-      urgency: category === 'building' ? urgency : 'normal',
-      issueDetail: category === 'building' ? issueDetail.trim() : '',
-      imageUrl: category === 'building' ? imagePreview : null,
+    const payload = {
+      studentId: currentStudentId,
+      studentName: currentStudentName,
+      category: requestCategory,
+      phone,
+      email,
+      slipImage,
+      fieldFeedbacks: {}
     };
 
-    if (socket && socket.emit) {
-      socket.emit('submit_request', requestData);
-      alert('ยื่นคำร้องสำเร็จเรียบร้อยแล้ว!');
-      setSubmitting(false);
+    if (requestCategory === 'doc') {
+      if (!purpose.trim()) {
+        alert('กรุณากรอกวัตถุประสงค์ในการยื่นคำร้อง');
+        return;
+      }
+      payload.docType = docType;
+      payload.copies = copies;
+      payload.purpose = purpose;
+      payload.note = note;
+      payload.faculty = faculty;
+      payload.yearLevel = yearLevel;
+      payload.gpax = gpax;
+      payload.deliveryMethod = deliveryMethod;
+      payload.address = address;
+    } else {
+      if (!issueDetail.trim()) {
+        alert('กรุณากรอกรายละเอียดอาการชำรุด');
+        return;
+      }
+      payload.docType = `แจ้งซ่อมปรับปรุงอาคาร (${repairCategory})`;
+      payload.repairCategory = repairCategory;
+      payload.buildingName = buildingName;
+      payload.roomNumber = roomNumber;
+      payload.issueDetail = issueDetail;
+      payload.imageUrl = slipImage;
+    }
+
+    console.log("📤 Submitting request payload via Socket:", payload);
+
+    if (socket) {
+      socket.emit('submit_request', payload);
+      alert('ส่งคำร้องสำเร็จเรียบร้อยแล้ว!');
       if (onSuccess) onSuccess();
     } else {
-      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
-      setSubmitting(false);
+      alert('เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ Server ได้');
     }
   };
 
+  const getFieldStyle = (fieldKey) => {
+    const hasError = fieldFeedbacks && fieldFeedbacks[fieldKey];
+    if (hasError) {
+      return {
+        inputClass: 'w-full px-4 py-2.5 rounded-xl bg-red-50 border-2 border-red-400 text-xs font-semibold outline-none focus:ring-2 focus:ring-red-500 shadow-sm text-red-900',
+        message: fieldFeedbacks[fieldKey]
+      };
+    }
+    return {
+      inputClass: 'w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500',
+      message: null
+    };
+  };
+
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-[#6b3a1f] flex items-center gap-2">
-            📝 แบบฟอร์มยื่นคำร้องแบบละเอียด
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">ระบุรายละเอียดและแนบหลักฐานเพื่อความรวดเร็วในการดำเนินการ</p>
-        </div>
-        <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-xl">
-          📑
-        </div>
-      </div>
-
-      {/* เลือกหมวดหมู่คำร้อง */}
-      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl mb-8">
-        <button
-          type="button"
-          onClick={() => setCategory('doc')}
-          className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            category === 'doc' ? 'bg-[#6b3a1f] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span>📄</span> ขอเอกสารการศึกษา
-        </button>
-        <button
-          type="button"
-          onClick={() => setCategory('building')}
-          className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            category === 'building' ? 'bg-[#6b3a1f] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span>🛠️</span> แจ้งซ่อมแซมอาคารสถานที่
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+      <div>
+        <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+          <span>📝</span> ยื่นคำร้องออนไลน์
+        </h2>
+        <p className="text-xs text-slate-400 mt-0.5">เลือกหมวดหมู่และกรอกรายละเอียดคำร้องของคุณ</p>
         
-        {/* ส่วนที่ 1: ข้อมูลนักศึกษา */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            👤 ข้อมูลผู้ยื่นคำร้อง
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">รหัสนักศึกษา</label>
-              <input type="text" value={user?.username || ''} disabled className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold" />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ชื่อ - นามสกุล</label>
-              <input type="text" value={user?.name || ''} disabled className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold" />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">คณะ / หน่วยงาน</label>
-              <select value={faculty} onChange={(e) => setFaculty(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                <option value="วิศวกรรมศาสตร์">วิศวกรรมศาสตร์</option>
-                <option value="บริหารธุรกิจ">บริหารธุรกิจ</option>
-                <option value="เทคโนโลยีการเกษตร">เทคโนโลยีการเกษตร</option>
-                <option value="ศิลปศาสตร์">ศิลปศาสตร์</option>
-                <option value="วิทยาศาสตร์และเทคโนโลยี">วิทยาศาสตร์และเทคโนโลยี</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">ชั้นปีการศึกษา</label>
-              <select value={yearLevel} onChange={(e) => setYearLevel(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                <option value="ปี 1">ชั้นปีที่ 1</option>
-                <option value="ปี 2">ชั้นปีที่ 2</option>
-                <option value="ปี 3">ชั้นปีที่ 3</option>
-                <option value="ปี 4">ชั้นปีที่ 4</option>
-                <option value="บัณฑิตศึกษา">สูงกว่าปริญญาตรี</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">เกรดเฉลี่ยสะสม (GPAX)</label>
-              <input type="number" step="0.01" min="0" max="4.00" placeholder="เช่น 3.25" value={gpax} onChange={(e) => setGpax(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span></label>
-              <input type="tel" placeholder="081-234-5678" value={phone} onChange={(e) => setPhone(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">อีเมลติดต่อ / รับไฟล์ E-Doc</label>
-              <input type="email" placeholder="student@mail.rmutt.ac.th" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-            </div>
+        {editData && (
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+            <span>⚠️</span> กำลังแก้ไขคำร้องเดิมที่ถูกตีกลับ (โปรดตรวจสอบจุดที่มีป้ายเตือนสีแดง)
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* ส่วนที่ 2: รายละเอียดกรณี "ขอเอกสารการศึกษา" */}
-        {category === 'doc' && (
-          <div className="space-y-4 pt-4 border-t border-slate-100">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              📄 รายละเอียดเอกสารการศึกษา
-            </h3>
+      <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-100 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setRequestCategory('doc')}
+          className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            requestCategory === 'doc' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          📄 ขอเอกสารทางการศึกษา
+        </button>
+        <button
+          type="button"
+          onClick={() => setRequestCategory('building')}
+          className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            requestCategory === 'building' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          🛠️ แจ้งซ่อมปรับปรุงอาคาร
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {requestCategory === 'doc' ? (
+          <>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">ประเภทเอกสารที่ต้องการร้องขอ</label>
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="หนังสือรับรองการเป็นนักศึกษา (ภาษาไทย)">หนังสือรับรองการเป็นนักศึกษา (ภาษาไทย)</option>
+                <option value="หนังสือรับรองการเป็นนักศึกษา (ภาษาอังกฤษ)">หนังสือรับรองการเป็นนักศึกษา (ภาษาอังกฤษ)</option>
+                <option value="ใบผลการศึกษา (Transcript ฉบับชั่วคราว)">ใบผลการศึกษา (Transcript ฉบับชั่วคราว)</option>
+                <option value="ใบรับรองความประพฤติ">ใบรับรองความประพฤติ</option>
+              </select>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">ประเภทเอกสาร</label>
-                <select value={docType} onChange={(e) => setDocType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                  <option value="หนังสือรับรองการเป็นนักศึกษา">หนังสือรับรองการเป็นนักศึกษา</option>
-                  <option value="ใบแสดงผลการเรียน (Transcript)">ใบแสดงผลการเรียน (Transcript)</option>
-                  <option value="หนังสือรับรองคาดว่าจะสำเร็จการศึกษา">หนังสือรับรองคาดว่าจะสำเร็จการศึกษา</option>
-                  <option value="หนังสือรับรองสถานภาพนักศึกษา">หนังสือรับรองสถานภาพนักศึกษา</option>
-                </select>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">ชั้นปี</label>
+                {(() => {
+                  const st = getFieldStyle('yearLevel');
+                  return (
+                    <div>
+                      <input
+                        type="text"
+                        value={yearLevel}
+                        onChange={(e) => setYearLevel(e.target.value)}
+                        className={st.inputClass}
+                        placeholder="เช่น ปี 1"
+                      />
+                      {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">ภาษาเอกสาร</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setLanguage('th')} className={`py-2 rounded-xl text-xs font-bold ${language === 'th' ? 'bg-[#6b3a1f] text-white' : 'bg-slate-100 text-slate-600'}`}>TH ไทย</button>
-                  <button type="button" onClick={() => setLanguage('en')} className={`py-2 rounded-xl text-xs font-bold ${language === 'en' ? 'bg-[#6b3a1f] text-white' : 'bg-slate-100 text-slate-600'}`}>EN อังกฤษ</button>
-                </div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">GPAX (เกรดเฉลี่ยสะสม)</label>
+                {(() => {
+                  const st = getFieldStyle('gpax');
+                  return (
+                    <div>
+                      <input
+                        type="text"
+                        value={gpax}
+                        onChange={(e) => setGpax(e.target.value)}
+                        className={st.inputClass}
+                        placeholder="เช่น 3.50"
+                      />
+                      {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">จำนวน (ฉบับ)</label>
-                <input type="number" min="1" max="10" value={copies} onChange={(e) => setCopies(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">วัตถุประสงค์นำไปใช้ <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="เช่น สมัครงาน, ยื่นขอทุนการศึกษา, ทำวีซ่า" value={purpose} onChange={(e) => setPurpose(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
+                <label className="block text-xs font-semibold text-slate-600 mb-1">จำนวนฉบับ</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={copies}
+                  onChange={(e) => setCopies(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                />
               </div>
             </div>
 
-            {/* ช่องทางรับเอกสาร */}
-            <div className="space-y-2 pt-2">
-              <label className="block text-xs font-semibold text-slate-600">ช่องทางรับเอกสาร</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label className={`p-3 rounded-2xl border text-xs font-semibold flex items-center gap-2 cursor-pointer ${deliveryMethod === 'self' ? 'bg-amber-50 border-amber-400 text-[#6b3a1f]' : 'bg-white border-slate-200 text-slate-600'}`}>
-                  <input type="radio" name="delivery" checked={deliveryMethod === 'self'} onChange={() => setDeliveryMethod('self')} className="accent-[#6b3a1f]" />
-                  🏢 รับด้วยตนเอง
-                </label>
-                <label className={`p-3 rounded-2xl border text-xs font-semibold flex items-center gap-2 cursor-pointer ${deliveryMethod === 'postal' ? 'bg-amber-50 border-amber-400 text-[#6b3a1f]' : 'bg-white border-slate-200 text-slate-600'}`}>
-                  <input type="radio" name="delivery" checked={deliveryMethod === 'postal'} onChange={() => setDeliveryMethod('postal')} className="accent-[#6b3a1f]" />
-                  📮 จัดส่งไปรษณีย์ EMS
-                </label>
-                <label className={`p-3 rounded-2xl border text-xs font-semibold flex items-center gap-2 cursor-pointer ${deliveryMethod === 'edoc' ? 'bg-amber-50 border-amber-400 text-[#6b3a1f]' : 'bg-white border-slate-200 text-slate-600'}`}>
-                  <input type="radio" name="delivery" checked={deliveryMethod === 'edoc'} onChange={() => setDeliveryMethod('edoc')} className="accent-[#6b3a1f]" />
-                  💻 E-Document (PDF)
-                </label>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">วัตถุประสงค์ในการยื่นคำร้อง <span className="text-red-500">*</span></label>
+              {(() => {
+                const st = getFieldStyle('purpose');
+                return (
+                  <div>
+                    <textarea
+                      rows="2"
+                      value={purpose}
+                      onChange={(e) => setPurpose(e.target.value)}
+                      className={st.inputClass}
+                      placeholder="เช่น เพื่อสมัครทุนการศึกษา / สมัครงาน"
+                      required
+                    />
+                    {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุเพิ่มเติม</label>
+              {(() => {
+                const st = getFieldStyle('note');
+                return (
+                  <div>
+                    <input
+                      type="text"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      className={st.inputClass}
+                      placeholder="ระบุเพิ่มเติม (ถ้ามี)"
+                    />
+                    {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">ช่องทางรับเอกสาร</label>
+              <select
+                value={deliveryMethod}
+                onChange={(e) => setDeliveryMethod(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="self">🏢 รับด้วยตนเองที่สำนักทะเบียน</option>
+                <option value="postal">📮 จัดส่งไปรษณีย์ EMS</option>
+                <option value="edoc">💻 E-Document (รับทางอีเมล)</option>
+              </select>
+            </div>
+
+            {deliveryMethod === 'postal' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">ที่อยู่สำหรับจัดส่งไปรษณีย์ EMS</label>
+                {(() => {
+                  const st = getFieldStyle('address');
+                  return (
+                    <div>
+                      <textarea
+                        rows="2"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className={st.inputClass}
+                        placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์"
+                      />
+                      {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                    </div>
+                  );
+                })()}
               </div>
-
-              {deliveryMethod === 'postal' && (
-                <div className="pt-2">
-                  <textarea rows="2" placeholder="กรอกที่อยู่จัดส่งโดยละเอียด พร้อมรหัสไปรษณีย์..." value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-                </div>
-              )}
-            </div>
-
-            {/* แนบสลิปชำระเงิน */}
-            <div className="space-y-2 pt-2">
-              <label className="block text-xs font-semibold text-slate-600">🧾 แนบหลักฐานการชำระเงิน / สลิปโอนเงิน (ถ้ามี)</label>
-              <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setSlipImage)} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-[#6b3a1f] hover:file:bg-amber-100 cursor-pointer" />
-              {slipImage && (
-                <div className="mt-2">
-                  <img src={slipImage} alt="ตัวอย่างสลิป" className="w-28 h-36 object-cover rounded-xl border border-slate-200 shadow-sm" />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ส่วนที่ 3: รายละเอียดกรณี "แจ้งซ่อมแซมอาคาร" */}
-        {category === 'building' && (
-          <div className="space-y-4 pt-4 border-t border-slate-100">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              🛠️ รายละเอียดการแจ้งซ่อมแซมอาคารเรียน
-            </h3>
-
+            )}
+          </>
+        ) : (
+          <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">อาคาร / สถานที่</label>
-                <select value={buildingName} onChange={(e) => setBuildingName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                  <option value="อาคารเรียนรวม CB">อาคารเรียนรวม CB</option>
-                  <option value="อาคารวิศวกรรมศาสตร์ 1">อาคารวิศวกรรมศาสตร์ 1</option>
-                  <option value="อาคารวิศวกรรมศาสตร์ 2">อาคารวิศวกรรมศาสตร์ 2</option>
-                  <option value="อาคารปฏิบัติการเทคโนโลยี">อาคารปฏิบัติการเทคโนโลยี</option>
-                  <option value="หอประชุมใหญ่">หอประชุมใหญ่</option>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">ประเภทงานซ่อม</label>
+                <select
+                  value={repairCategory}
+                  onChange={(e) => setRepairCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="ไฟฟ้า">💡 ระบบไฟฟ้า / แสงสว่าง</option>
+                  <option value="ประปา">🚰 ระบบประปา / ห้องน้ำ</option>
+                  <option value="แอร์">❄️ เครื่องปรับอากาศ</option>
+                  <option value="โครงสร้าง">🚪 อาคาร / ประตู / หน้าต่าง</option>
+                  <option value="อื่นๆ">📌 อื่นๆ</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">เลขห้อง / จุดเกิดเหตุ <span className="text-red-500">*</span></label>
-                <input type="text" placeholder="เช่น ห้อง CB-304 หรือ โถงชั้น 1" value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">ประเภทงานซ่อมแซม</label>
-                <select value={repairCategory} onChange={(e) => setRepairCategory(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                  <option value="งานระบบไฟฟ้า/ปลั๊กไฟ">🔌 งานระบบไฟฟ้า / ปลั๊กไฟ / สวิตช์</option>
-                  <option value="งานระบบปรับอากาศ">ระบบปรับอากาศ (แอร์)</option>
-                  <option value="งานอุปกรณ์ไอที/โปรเจกเตอร์">🖥️ อุปกรณ์ไอที / โปรเจกเตอร์ / ลำโพง</option>
-                  <option value="งานครุภัณฑ์/โต๊ะเก้าอี้">🪑 ครุภัณฑ์ / โต๊ะ / เก้าอี้ / ประตู</option>
-                  <option value="งานระบบประปา/สุขภัณฑ์">🚰 ระบบประปา / ห้องน้ำ / สุขภัณฑ์</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">ระดับความเร่งด่วน</label>
-                <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
-                  <option value="normal">🟢 ปกติ (ดำเนินการตามคิว)</option>
-                  <option value="urgent">🟡 ด่วน (กระทบการเรียนการสอน)</option>
-                  <option value="critical">🔴 ด่วนที่สุด (เกิดอันตราย/ไฟฟ้าช็อต)</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดอาการชำรุด <span className="text-red-500">*</span></label>
-                <textarea rows="3" placeholder="ระบุอาการชำรุดโดยละเอียด..." value={issueDetail} onChange={(e) => setIssueDetail(e.target.value)} required className="w-full px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold" />
-              </div>
-
-              {/* แนบรูปภาพความเสียหาย */}
-              <div className="sm:col-span-2 space-y-2">
-                <label className="block text-xs font-semibold text-slate-600">📸 แนบรูปภาพความเสียหายชำรุด</label>
-                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setImagePreview)} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-[#6b3a1f] hover:file:bg-amber-100 cursor-pointer" />
-                {imagePreview && (
-                  <div className="mt-2">
-                    <img src={imagePreview} alt="รูปแนบ" className="w-32 h-32 object-cover rounded-2xl border border-slate-200" />
-                  </div>
-                )}
+                <label className="block text-xs font-semibold text-slate-600 mb-1">สถานที่ / อาคาร</label>
+                <input
+                  type="text"
+                  value={buildingName}
+                  onChange={(e) => setBuildingName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="เช่น อาคาร 1, โรงอาหาร"
+                />
               </div>
             </div>
-          </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">เลขที่ห้อง / บริเวณ</label>
+              <input
+                type="text"
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="เช่น ห้อง 302 หรือโถงทางเดินชั้น 2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">รายละเอียดอาการชำรุด <span className="text-red-500">*</span></label>
+              <textarea
+                rows="3"
+                value={issueDetail}
+                onChange={(e) => setIssueDetail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="ระบุปัญหาที่พบ เช่น หลอดไฟกระพริบ, ก๊อกน้ำรั่ว..."
+                required
+              />
+            </div>
+          </>
         )}
 
-        <div className="pt-4">
-          <button type="submit" disabled={submitting} className="w-full py-3.5 rounded-2xl bg-[#6b3a1f] hover:bg-[#522b16] text-white font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2">
-            🚀 {submitting ? 'กำลังส่งข้อมูล...' : 'ยื่นคำร้อง'}
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+            {(() => {
+              const st = getFieldStyle('phone');
+              return (
+                <div>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={st.inputClass}
+                    placeholder="0812345678"
+                  />
+                  {st.message && <p className="text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded">🚨 {st.message}</p>}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">อีเมล</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+              placeholder="user@gmail.com"
+            />
+          </div>
         </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">แนบรูปภาพประกอบ / หลักฐาน</label>
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"
+            />
+            {slipImage && (
+              <img src={slipImage} alt="พรีวิวรูปแนบ" className="w-full max-h-40 object-contain rounded-2xl border border-slate-200 bg-slate-50 p-2" />
+            )}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all cursor-pointer"
+        >
+          🚀 ส่งคำร้องขอเอกสาร
+        </button>
 
       </form>
     </div>

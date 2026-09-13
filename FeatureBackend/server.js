@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const USERS_FILE = path.join(__dirname, 'users.json');
 const REQUESTS_FILE = path.join(__dirname, 'requests.json');
+const ANNOUNCEMENTS_FILE = path.join(__dirname, 'announcements.json');
 
 const DEFAULT_USERS = [
   { id: 1, username: '660610001', password: 'password123', name: 'นายกิตติศักดิ์ ใจดี', role: 'user' },
@@ -26,6 +27,20 @@ const DEFAULT_REQUESTS = [
     copies: 1,
     purpose: 'สมัครทุนการศึกษา',
     status: 'pending',
+    feedback: '',
+    fieldFeedbacks: {},
+    deliverySchedule: '',
+    adminFeedback: '',
+    createdAt: new Date().toISOString()
+  }
+];
+
+const DEFAULT_ANNOUNCEMENTS = [
+  {
+    id: 'ANN-001',
+    title: '📢 ประกาศกำหนดการยื่นคำร้องขอเอกสารประจำภาคการศึกษา',
+    content: 'นักศึกษาสามารถยื่นคำร้องขอเอกสารทางการศึกษาออนไลน์ได้ตลอด 24 ชั่วโมง โดยสำนักทะเบียนจะดำเนินการตรวจสอบและอนุมัติภายใน 1-2 วันทำการ',
+    author: 'สำนักส่งเสริมวิชาการและงานทะเบียน',
     createdAt: new Date().toISOString()
   }
 ];
@@ -41,6 +56,10 @@ const readJson = (filePath) => {
         writeJson(filePath, DEFAULT_REQUESTS);
         return DEFAULT_REQUESTS;
       }
+      if (filePath.includes('announcements.json')) {
+        writeJson(filePath, DEFAULT_ANNOUNCEMENTS);
+        return DEFAULT_ANNOUNCEMENTS;
+      }
       return [];
     }
     const data = fs.readFileSync(filePath, 'utf8');
@@ -50,10 +69,16 @@ const readJson = (filePath) => {
       writeJson(filePath, DEFAULT_USERS);
       return DEFAULT_USERS;
     }
+    if (filePath.includes('announcements.json') && parsed.length === 0) {
+      writeJson(filePath, DEFAULT_ANNOUNCEMENTS);
+      return DEFAULT_ANNOUNCEMENTS;
+    }
     return parsed;
   } catch (err) {
     console.error(`Error reading ${filePath}:`, err);
-    return filePath.includes('users.json') ? DEFAULT_USERS : [];
+    if (filePath.includes('users.json')) return DEFAULT_USERS;
+    if (filePath.includes('announcements.json')) return DEFAULT_ANNOUNCEMENTS;
+    return [];
   }
 };
 
@@ -78,6 +103,21 @@ const writeJson = (filePath, data) => {
         } catch (e) {}
       });
     }
+
+    if (filePath.includes('announcements.json')) {
+      const annUserSrc = path.join(__dirname, '../FeatureUser/src/announcements.json');
+      const annAdminSrc = path.join(__dirname, '../FeatureAdmin/src/announcements.json');
+
+      const targetAnnPaths = [annUserSrc, annAdminSrc];
+      targetAnnPaths.forEach((tPath) => {
+        try {
+          const dir = path.dirname(tPath);
+          if (fs.existsSync(dir)) {
+            fs.writeFileSync(tPath, jsonString, 'utf8');
+          }
+        } catch (e) {}
+      });
+    }
   } catch (err) {
     console.error(`Error writing ${filePath}:`, err);
   }
@@ -92,8 +132,6 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-
-// ================= USER & AUTH APIS =================
 
 app.post('/api/register', (req, res) => {
   const { studentId, name, password } = req.body;
@@ -199,7 +237,6 @@ app.post('/api/admin/users', (req, res) => {
   res.json({ success: true, message: 'เพิ่มบัญชีผู้ใช้สำเร็จ', data: newUser });
 });
 
-// 🌟 API: แก้ไขชื่อผู้ใช้งาน (Admin Edit User Name)
 app.put('/api/admin/users/:id', (req, res) => {
   const userId = req.params.id;
   const { name } = req.body;
@@ -235,57 +272,105 @@ app.delete('/api/admin/users/:id', (req, res) => {
   res.json({ success: true, message: 'ลบบัญชีผู้ใช้เรียบร้อยแล้ว' });
 });
 
-// ================= REQUESTS APIS =================
-
 app.get('/api/requests', (req, res) => {
   const requests = readJson(REQUESTS_FILE);
   res.json({ success: true, data: requests });
 });
 
 app.delete('/api/requests/:id', (req, res) => {
-  const requestId = req.params.id;
-  let requests = readJson(REQUESTS_FILE);
+  try {
+    const requestId = req.params.id;
+    let requests = readJson(REQUESTS_FILE);
+    const initialLength = requests.length;
+    
+    requests = requests.filter(r => String(r.id) !== String(requestId));
 
-  const initialLength = requests.length;
-  requests = requests.filter(r => String(r.id) !== String(requestId));
+    if (requests.length === initialLength) {
+      return res.status(404).json({ success: false, message: 'ไม่พบคำร้องที่ต้องการลบ' });
+    }
 
-  if (requests.length === initialLength) {
-    return res.status(404).json({ success: false, message: 'ไม่พบคำร้องที่ต้องการลบ' });
+    writeJson(REQUESTS_FILE, requests);
+    io.emit('request_updated', requests);
+    res.json({ success: true, message: 'ลบคำร้องเรียบร้อยแล้ว', data: requests });
+  } catch (err) {
+    console.error('Error deleting request via API:', err);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบคำร้อง' });
   }
-
-  writeJson(REQUESTS_FILE, requests);
-  io.emit('request_updated', requests);
-  res.json({ success: true, message: 'ลบคำร้องเรียบร้อยแล้ว' });
 });
 
-// ================= SOCKET.IO EVENTS =================
+app.post('/api/admin/reset-requests', (req, res) => {
+  try {
+    const emptyRequests = [];
+    writeJson(REQUESTS_FILE, emptyRequests);
+    io.emit('request_updated', emptyRequests);
+    res.json({ success: true, message: 'รีเซ็ตประวัติคำร้องทั้งหมดเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการรีเซ็ตคำร้อง' });
+  }
+});
+
+app.get('/api/announcements', (req, res) => {
+  const announcements = readJson(ANNOUNCEMENTS_FILE);
+  res.json({ success: true, data: announcements });
+});
 
 io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
   const currentRequests = readJson(REQUESTS_FILE);
   socket.emit('initial_requests', currentRequests);
 
+  const currentAnnouncements = readJson(ANNOUNCEMENTS_FILE);
+  socket.emit('initial_announcements', currentAnnouncements);
+
   socket.on('submit_request', (newReqData) => {
-    const requests = readJson(REQUESTS_FILE);
-    const newRequest = {
-      id: `REQ-${String(requests.length + 1).padStart(3, '0')}`,
-      ...newReqData,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const requests = readJson(REQUESTS_FILE);
+      const newRequest = {
+        id: `REQ-${String(requests.length + 1).padStart(3, '0')}`,
+        ...newReqData,
+        status: 'pending',
+        feedback: '',
+        fieldFeedbacks: {},
+        deliverySchedule: '',
+        adminFeedback: '',
+        createdAt: new Date().toISOString()
+      };
 
-    requests.unshift(newRequest);
-    writeJson(REQUESTS_FILE, requests);
-    io.emit('request_updated', requests);
-  });
-
-  socket.on('update_status', ({ requestId, status }) => {
-    const requests = readJson(REQUESTS_FILE);
-    const target = requests.find(r => String(r.id) === String(requestId));
-
-    if (target) {
-      target.status = status;
+      requests.unshift(newRequest);
       writeJson(REQUESTS_FILE, requests);
       io.emit('request_updated', requests);
+    } catch (err) {
+      console.error('Error in submit_request:', err);
+    }
+  });
+
+  // 🌟 อัปเดตสถานะ พร้อมรับค่านัดหมายส่งมอบ (deliverySchedule) และ Feedback
+  socket.on('update_status', ({ requestId, status, feedback, fieldFeedbacks, deliverySchedule, adminFeedback }) => {
+    try {
+      const requests = readJson(REQUESTS_FILE);
+      const target = requests.find(r => String(r.id) === String(requestId));
+
+      if (target) {
+        target.status = status;
+        target.feedback = feedback || '';
+        target.fieldFeedbacks = fieldFeedbacks || {};
+        target.deliverySchedule = deliverySchedule || '';
+        target.adminFeedback = adminFeedback || '';
+
+        if (status === 'rejected' && fieldFeedbacks) {
+          Object.keys(fieldFeedbacks).forEach(fieldKey => {
+            if (target[fieldKey] !== undefined) {
+              target[fieldKey] = '';
+            }
+          });
+        }
+
+        writeJson(REQUESTS_FILE, requests);
+        io.emit('request_updated', requests);
+      }
+    } catch (err) {
+      console.error('Error in update_status:', err);
     }
   });
 
@@ -294,6 +379,25 @@ io.on('connection', (socket) => {
     requests = requests.filter(r => String(r.id) !== String(requestId));
     writeJson(REQUESTS_FILE, requests);
     io.emit('request_updated', requests);
+  });
+
+  socket.on('create_announcement', (newAnnData) => {
+    const anns = readJson(ANNOUNCEMENTS_FILE);
+    const newAnn = {
+      id: `ANN-${String(anns.length + 1).padStart(3, '0')}`,
+      ...newAnnData,
+      createdAt: new Date().toISOString()
+    };
+    anns.unshift(newAnn);
+    writeJson(ANNOUNCEMENTS_FILE, anns);
+    io.emit('announcements_updated', anns);
+  });
+
+  socket.on('delete_announcement', (annId) => {
+    let anns = readJson(ANNOUNCEMENTS_FILE);
+    anns = anns.filter(a => String(a.id) !== String(annId));
+    writeJson(ANNOUNCEMENTS_FILE, anns);
+    io.emit('announcements_updated', anns);
   });
 });
 

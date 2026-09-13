@@ -8,12 +8,12 @@ import RequestHistory from './RequestHistory';
 const socket = io('http://localhost:5000');
 
 export default function StudentDashboard({ user, onLogout, onBackToHome }) {
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'new-request' | 'tracking' | 'history'
+  const [activeTab, setActiveTab] = useState('home');
   const [requests, setRequests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [editingRequest, setEditingRequest] = useState(null);
 
   useEffect(() => {
-    // โหลดคำร้อง
     fetch('http://localhost:5000/api/requests')
       .then(res => res.json())
       .then(resData => {
@@ -21,7 +21,6 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
       })
       .catch(err => console.error('Error fetching requests:', err));
 
-    // โหลดประกาศประชาสัมพันธ์
     fetch('http://localhost:5000/api/announcements')
       .then(res => res.json())
       .then(resData => {
@@ -32,17 +31,16 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
     socket.on('initial_requests', (data) => setRequests(data || []));
     socket.on('request_updated', (data) => setRequests(data || []));
     socket.on('initial_announcements', (data) => setAnnouncements(data || []));
-    socket.on('announcement_updated', (data) => setAnnouncements(data || []));
+    socket.on('announcements_updated', (data) => setAnnouncements(data || []));
 
     return () => {
       socket.off('initial_requests');
       socket.off('request_updated');
       socket.off('initial_announcements');
-      socket.off('announcement_updated');
+      socket.off('announcements_updated');
     };
   }, []);
 
-  // 🛡️ ป้องกันจอขาวกรณี user เป็น null ตอนกด F5
   if (!user) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 font-sans">
@@ -62,11 +60,15 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
     );
   }
 
+  // 🌟 จุดที่แก้ไข: ตรวจสอบทั้ง studentId และชื่อ เพื่อให้ข้อมูลแสดงผลชัวร์ 100% แม้รหัสจะไม่ตรงกันเป๊ะ
   const currentStudentId = String(user?.username || '').trim().toLowerCase();
+  const currentStudentName = String(user?.name || '').trim().toLowerCase();
   
-  const myRequests = (requests || []).filter(r => 
-    String(r.studentId || '').trim().toLowerCase() === currentStudentId
-  );
+  const myRequests = (requests || []).filter(r => {
+    const reqSid = String(r.studentId || '').trim().toLowerCase();
+    const reqSname = String(r.studentName || '').trim().toLowerCase();
+    return reqSid === currentStudentId || (currentStudentName && reqSname.includes(currentStudentName));
+  });
   
   const pendingRequests = myRequests.filter(r => r.status === 'pending');
   const completedRequests = myRequests.filter(r => r.status !== 'pending');
@@ -74,7 +76,6 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
       
-      {/* Navigation Header */}
       <header className="bg-gradient-to-r from-[#3b1f0e] to-[#6b3a1f] text-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -89,11 +90,10 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
               </div>
             </div>
 
-            {/* Navigation Tabs */}
             <nav className="flex items-center gap-1 sm:gap-2">
               <button
                 type="button"
-                onClick={() => setActiveTab('home')}
+                onClick={() => { setActiveTab('home'); setEditingRequest(null); }}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   activeTab === 'home' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
@@ -103,7 +103,7 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('new-request')}
+                onClick={() => { setActiveTab('new-request'); setEditingRequest(null); }}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   activeTab === 'new-request' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
@@ -113,7 +113,7 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('tracking')}
+                onClick={() => { setActiveTab('tracking'); setEditingRequest(null); }}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer relative ${
                   activeTab === 'tracking' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
@@ -128,7 +128,7 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
 
               <button
                 type="button"
-                onClick={() => setActiveTab('history')}
+                onClick={() => { setActiveTab('history'); setEditingRequest(null); }}
                 className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   activeTab === 'history' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
@@ -166,14 +166,21 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
         </div>
       </header>
 
-      {/* Main Container Render ตาม activeTab */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === 'home' && (
           <StudentHome user={user} announcements={announcements} onNavigate={(tab) => setActiveTab(tab)} />
         )}
 
         {activeTab === 'new-request' && (
-          <RequestForm user={user} socket={socket} onSuccess={() => setActiveTab('tracking')} />
+          <RequestForm 
+            user={user} 
+            socket={socket} 
+            editData={editingRequest}
+            onSuccess={() => {
+              setEditingRequest(null);
+              setActiveTab('tracking');
+            }} 
+          />
         )}
 
         {activeTab === 'tracking' && (
@@ -181,7 +188,13 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
         )}
 
         {activeTab === 'history' && (
-          <RequestHistory requests={completedRequests} />
+          <RequestHistory 
+            requests={completedRequests} 
+            onEditAndResubmit={(reqToEdit) => {
+              setEditingRequest(reqToEdit);
+              setActiveTab('new-request');
+            }} 
+          />
         )}
       </main>
 

@@ -1,112 +1,130 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
 
 export default function StatusTracking({ requests = [], socket }) {
-  const [items, setItems] = useState(requests);
+  const [selectedDetailReq, setSelectedDetailReq] = useState(null);
 
-  useEffect(() => {
-    setItems(requests);
-  }, [requests]);
-
-  // ฟังก์ชันลบคำร้องถาวรทั้งฝั่ง UI, Socket และ HTTP API
-  const handleDelete = async (requestId) => {
-    if (!requestId) return;
-
-    const confirmDelete = window.confirm(`คุณต้องการยกเลิกคำร้องหมายเลข ${requestId} ใช่หรือไม่?`);
-    if (!confirmDelete) return;
-
-    // 1. ลบออกจากหน้าจอ UI ทันที
-    setItems(prev => prev.filter(item => String(item.id) !== String(requestId)));
-
-    // 2. ส่ง Socket Event ไปลบฝั่ง Backend Real-time
-    if (socket && socket.emit) {
-      socket.emit('delete_request', requestId);
-    }
-
-    // 3. ยิง HTTP DELETE API สำรอง เพื่อรับประกันการเขียนลงไฟล์ requests.json ถาวร
-    try {
-      await axios.delete(`http://localhost:5000/api/requests/${requestId}`);
-    } catch (err) {
-      console.error('Error deleting request via API:', err);
+  const handleDelete = (requestId) => {
+    if (window.confirm(`⚠️ คุณต้องการยกเลิกคำร้องหมายเลข ${requestId} นี้ใช่หรือไม่?`)) {
+      if (socket) {
+        socket.emit('delete_request', requestId);
+        if (selectedDetailReq && selectedDetailReq.id === requestId) {
+          setSelectedDetailReq(null);
+        }
+      }
     }
   };
 
-  if (!items || items.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-2xl mx-auto shadow-sm">
-        <div className="text-4xl mb-3">📬</div>
-        <h3 className="text-base font-bold text-slate-700">ไม่มีคำร้องที่กำลังดำเนินการ</h3>
-        <p className="text-xs text-slate-400 mt-1">คำร้องที่คุณยื่นจะแสดงสถานะอัปเดตแบบเรียลไทม์ที่นี่</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto space-y-4 mb-8">
-      <h2 className="text-lg font-bold text-[#6b3a1f] flex items-center gap-2 mb-4">
-        🟡 รายการคำร้องที่กำลังดำเนินการ ({items.length})
-      </h2>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-[#6b3a1f] flex items-center gap-2">
+            📬 ติดตามสถานะและกำหนดการนัดหมาย
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">ติดตามคำร้องที่กำลังดำเนินการ หรือตรวจสอบวันเวลานัดหมายรับเอกสาร</p>
+        </div>
+      </div>
 
-      {items.map((req, index) => {
-        if (!req) return null;
-
-        const reqId = req.id || `REQ-TEMP-${index}`;
-
-        return (
-          <div key={reqId} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-amber-300 transition-all">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 bg-amber-100 text-[#6b3a1f] rounded-md">{reqId}</span>
-                <span className="text-xs text-slate-400">
-                  {req.createdAt ? new Date(req.createdAt).toLocaleString('th-TH') : ''}
-                </span>
-              </div>
-
-              <h4 className="text-base font-bold text-slate-800">{req.docType || 'รายการคำร้อง'}</h4>
-
-              <div className="text-xs text-slate-600 space-y-0.5">
-                <p>
-                  <span className="font-semibold text-slate-500">ผู้ยื่น:</span> {req.studentName || '-'} ({req.studentId || '-'}) 
-                  {req.phone ? ` | เบอร์โทร: ${req.phone}` : ''}
-                </p>
-
-                {req.buildingName && (
-                  <p><span className="font-semibold text-slate-500">สถานที่:</span> {req.buildingName} {req.roomNumber ? `(ห้อง ${req.roomNumber})` : ''}</p>
-                )}
-
-                {req.issueDetail && (
-                  <p><span className="font-semibold text-slate-500">รายละเอียดงาน:</span> {req.issueDetail}</p>
-                )}
-
-                {req.purpose && (
-                  <p><span className="font-semibold text-slate-500">วัตถุประสงค์/หมายเหตุ:</span> {req.purpose}</p>
-                )}
-              </div>
-
-              {req.imageUrl && (
-                <div className="mt-2">
-                  <img src={req.imageUrl} alt="รูปประกอบคำร้อง" className="w-20 h-20 object-cover rounded-xl border border-slate-200" />
+      {requests.length === 0 ? (
+        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm space-y-2">
+          <div className="text-4xl">📭</div>
+          <h3 className="text-base font-bold text-slate-700">ไม่มีคำร้องที่กำลังดำเนินการ</h3>
+          <p className="text-xs text-slate-400">คำร้องที่คุณยื่นหรือรายการที่รอนัดหมายรับมอบจะแสดงที่นี่</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {requests.map((req) => {
+            const isApproved = req.status === 'approved';
+            return (
+              <div key={req.id} className={`bg-white p-6 rounded-3xl border shadow-sm space-y-4 ${isApproved ? 'border-emerald-300 bg-emerald-50/20' : 'border-slate-200'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg">{req.id}</span>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {isApproved ? '🟢 อนุมัติแล้ว (รอนัดหมาย/ส่งมอบ)' : '🟡 กำลังดำเนินการ / รอตรวจสอบ'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400">{req.createdAt ? new Date(req.createdAt).toLocaleString('th-TH') : ''}</span>
                 </div>
-              )}
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-800">{req.docType}</h3>
+                    <p className="text-xs text-slate-500">วัตถุประสงค์: {req.purpose || req.issueDetail || '-'}</p>
+                    
+                    {/* 🌟 แสดงเวลานัดหมายส่งมอบ ถ้าแอดมินระบุมา */}
+                    {isApproved && req.deliverySchedule && (
+                      <div className="mt-2 p-3 bg-emerald-100/60 border border-emerald-200 rounded-2xl text-xs text-emerald-900 font-semibold space-y-0.5">
+                        <p>📅 <strong>กำหนดนัดหมายส่งมอบ:</strong> {req.deliverySchedule}</p>
+                        {req.adminFeedback && <p>💬 <strong>หมายเหตุจากเจ้าหน้าที่:</strong> {req.adminFeedback}</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDetailReq(req)}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer"
+                    >
+                      🔍 ดูรายละเอียด
+                    </button>
+
+                    {!isApproved && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(req.id)}
+                        className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold text-xs transition-all cursor-pointer border border-red-100"
+                      >
+                        🗑️ ยกเลิกคำร้อง
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal ดูรายละเอียด */}
+      {selectedDetailReq && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 p-6 space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-xs font-mono font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">{selectedDetailReq.id}</span>
+                <h3 className="text-base font-bold text-slate-800 mt-1">รายละเอียดคำร้องและกำหนดการ</h3>
+              </div>
+              <button type="button" onClick={() => setSelectedDetailReq(null)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold cursor-pointer">✕</button>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
-              <div className="flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                กำลังรอเจ้าหน้าที่ตรวจสอบ
+            <div className="space-y-3 text-xs text-slate-600">
+              <div className="bg-slate-50 p-4 rounded-2xl space-y-1.5">
+                <p><span className="text-slate-400">ประเภท:</span> <strong className="text-slate-800">{selectedDetailReq.docType}</strong></p>
+                {selectedDetailReq.purpose && <p><span className="text-slate-400">วัตถุประสงค์:</span> {selectedDetailReq.purpose}</p>}
+                
+                {selectedDetailReq.deliverySchedule && (
+                  <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 font-semibold space-y-1">
+                    <p>📅 <strong>วันเวลานัดหมาย:</strong> {selectedDetailReq.deliverySchedule}</p>
+                    {selectedDetailReq.adminFeedback && <p>💬 <strong>ข้อความจากเจ้าหน้าที่:</strong> {selectedDetailReq.adminFeedback}</p>}
+                  </div>
+                )}
               </div>
+            </div>
 
+            <div className="flex justify-end border-t border-slate-100 pt-4">
               <button
                 type="button"
-                onClick={() => handleDelete(req.id)}
-                className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border border-red-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                onClick={() => setSelectedDetailReq(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
               >
-                <span>🗑️</span> ยกเลิกคำร้อง
+                ปิดหน้าต่าง
               </button>
             </div>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }
