@@ -18,7 +18,6 @@ export default function AdminLandingPage({ user, onLogout }) {
   const [fieldFeedbacks, setFieldFeedbacks] = useState({});
   const [rejectGeneralReason, setRejectGeneralReason] = useState('');
   
-  // 🌟 เพิ่ม States สำหรับกำหนดวันเวลาส่งมอบตอนอนุมัติ
   const [deliverySchedule, setDeliverySchedule] = useState('');
   const [adminFeedback, setAdminFeedback] = useState('');
 
@@ -277,7 +276,6 @@ export default function AdminLandingPage({ user, onLogout }) {
               )}
             </button>
 
-            {/* 🌟 เพิ่มเมนูตารางนัดหมายและส่งมอบ */}
             <button
               type="button"
               onClick={() => setActiveTab('delivery')}
@@ -337,7 +335,6 @@ export default function AdminLandingPage({ user, onLogout }) {
           <AdminAnnouncements announcements={announcements} socket={socket} user={user} />
         )}
 
-        {/* 🌟 จัดการตารางนัดหมายส่งมอบ (Delivery / Pickup Schedule) */}
         {activeTab === 'delivery' && (
           <div className="space-y-6">
             <div>
@@ -434,16 +431,92 @@ export default function AdminLandingPage({ user, onLogout }) {
 
         {activeTab === 'users' && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-800">👥 จัดการบัญชีผู้ใช้งานระบบ</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-800">👥 จัดการบัญชีผู้ใช้งานระบบ</h2>
+                <p className="text-xs text-slate-400 mt-0.5">เพิ่ม ลบ หรือแก้ไขข้อมูลบัญชีผู้ใช้งานในระบบ</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddUserModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-sm transition-all cursor-pointer"
+              >
+                + เพิ่มบัญชีผู้ใช้ใหม่
+              </button>
             </div>
-            {/* ตารางจัดการ User คงเดิม */}
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <input
+                type="text"
+                placeholder="🔍 ค้นหาด้วยรหัสนักศึกษา หรือ ชื่อ-นามสกุล..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                      <th className="p-4">รหัสนักศึกษา / Username</th>
+                      <th className="p-4">ชื่อ - นามสกุล</th>
+                      <th className="p-4">สถานะ (Role)</th>
+                      <th className="p-4 text-right">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="p-8 text-center text-slate-400">ไม่พบข้อมูลผู้ใช้งานในระบบ</td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="p-4 font-mono font-bold text-slate-700">{u.username}</td>
+                          <td className="p-4 font-semibold text-slate-800">{u.name}</td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {u.role === 'admin' ? '🛡️ Admin' : '🎓 User'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right space-x-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleEditName(u.id, u.name)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+                            >
+                              ✏️ แก้ไขชื่อ
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetPassword(u.username)}
+                              className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold cursor-pointer"
+                            >
+                              🔑 เปลี่ยนรหัส
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold cursor-pointer border border-red-100"
+                            >
+                              🗑️ ลบ
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
       </main>
 
-      {/* 🌟 Modal ตรวจสอบคำร้อง (เพิ่มฟอร์มกรอกวันเวลานัดหมายตอนอนุมัติ) */}
+      {/* Modal ตรวจสอบคำร้อง (ดีไซน์ใหม่เรียบหรูและใช้งานง่าย) */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 p-6 space-y-6">
@@ -457,15 +530,18 @@ export default function AdminLandingPage({ user, onLogout }) {
             
             <div className="space-y-4 text-xs text-slate-600">
               <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-                <p className="font-bold text-slate-700 text-sm">👤 ข้อมูลผู้ยื่น</p>
-                <p><strong>{selectedRequest.studentName}</strong> (รหัส: {selectedRequest.studentId})</p>
-                <p><strong>รายการ:</strong> {selectedRequest.docType}</p>
-                <p><strong>วัตถุประสงค์:</strong> {selectedRequest.purpose || '-'}</p>
+                <p className="font-bold text-slate-700 text-sm">👤 ข้อมูลผู้ยื่นและรายละเอียดคำร้อง</p>
+                <p><strong>ชื่อ-นามสกุล:</strong> {selectedRequest.studentName} (รหัส: {selectedRequest.studentId})</p>
+                <p><strong>ประเภทเอกสาร:</strong> {selectedRequest.docType}</p>
+                {selectedRequest.yearLevel && <p><strong>ชั้นปี:</strong> {selectedRequest.yearLevel}</p>}
+                {selectedRequest.gpax && <p><strong>GPAX:</strong> {selectedRequest.gpax}</p>}
+                <p><strong>วัตถุประสงค์ / รายละเอียด:</strong> {selectedRequest.purpose || selectedRequest.issueDetail || '-'}</p>
+                {selectedRequest.phone && <p><strong>เบอร์โทรศัพท์:</strong> {selectedRequest.phone}</p>}
+                {selectedRequest.address && <p><strong>ที่อยู่จัดส่ง:</strong> {selectedRequest.address}</p>}
               </div>
 
               {selectedRequest.status === 'pending' && (
                 <div className="space-y-4">
-                  {/* 🌟 ช่องกรอกสำหรับกดยืนยันอนุมัติ (กำหนดเวลานัดหมาย) */}
                   <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200 space-y-3">
                     <h4 className="text-xs font-extrabold text-emerald-800">📅 กำหนดวันเวลานัดหมายส่งมอบ (สำหรับการอนุมัติ)</h4>
                     <div>
@@ -490,19 +566,27 @@ export default function AdminLandingPage({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* ช่องกรอกสำหรับการปฏิเสธ (Field Feedbacks) */}
                   <div className="bg-red-50/60 p-4 rounded-2xl border border-red-200 space-y-3">
-                    <h4 className="text-xs font-bold text-red-700">⚠️ หรือระบุจุดที่ต้องให้ผู้ใช้แก้ไข (กรณีปฏิเสธ)</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {['gpax', 'yearLevel', 'purpose', 'phone'].map(field => (
-                        <input
-                          key={field}
-                          type="text"
-                          placeholder={`แนะนำแก้จุด ${field}...`}
-                          value={fieldFeedbacks[field] || ''}
-                          onChange={(e) => handleFieldFeedbackChange(field, e.target.value)}
-                          className="px-3 py-1.5 rounded-xl bg-white border border-red-200 text-xs outline-none"
-                        />
+                    <h4 className="text-xs font-extrabold text-red-700">⚠️ ระบุจุดที่ต้องให้ผู้ใช้แก้ไข (กรณีปฏิเสธคำร้อง)</h4>
+                    <p className="text-[11px] text-slate-500">พิมพ์คำแนะนำเฉพาะช่องที่ต้องการให้ฝั่งนักศึกษาแก้ไข (ช่องไหนไม่กรอก ปล่อยว่างไว้ได้เลย)</p>
+                    
+                    <div className="space-y-2.5 pt-1">
+                      {[
+                        { key: 'yearLevel', label: 'ชั้นปี (Year Level)' },
+                        { key: 'gpax', label: 'GPAX' },
+                        { key: 'purpose', label: 'วัตถุประสงค์ / รายละเอียด' },
+                        { key: 'phone', label: 'เบอร์โทรศัพท์' }
+                      ].map((item) => (
+                        <div key={item.key} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-red-100 shadow-xs">
+                          <span className="w-32 font-bold text-slate-700 shrink-0">{item.label}</span>
+                          <input
+                            type="text"
+                            placeholder={`ระบุสิ่งที่ต้องแก้ไขในส่วน ${item.label}...`}
+                            value={fieldFeedbacks[item.key] || ''}
+                            onChange={(e) => handleFieldFeedbackChange(item.key, e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs outline-none focus:border-red-400"
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -513,14 +597,80 @@ export default function AdminLandingPage({ user, onLogout }) {
             <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
               {selectedRequest.status === 'pending' ? (
                 <>
-                  <button type="button" onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer">✕ ปฏิเสธคำร้อง</button>
-                  <button type="button" onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')} className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer">✓ อนุมัติและบันทึกเวลานัดหมาย</button>
+                  <button type="button" onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')} className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer transition-all">✕ ปฏิเสธคำร้อง</button>
+                  <button type="button" onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')} className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer transition-all">✓ อนุมัติและบันทึกเวลานัดหมาย</button>
                 </>
               ) : (
                 <button type="button" onClick={() => setSelectedRequest(null)} className="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">ปิดหน้าต่าง</button>
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleCreateUser} className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-800">➕ เพิ่มบัญชีผู้ใช้งานใหม่</h3>
+              <button type="button" onClick={() => setShowAddUserModal(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold cursor-pointer">✕</button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">รหัสนักศึกษา / Username</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น 660610002"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">ชื่อ - นามสกุล</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น นายสมชาย ใจดี"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">รหัสผ่าน</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="รหัสผ่านสำหรับเข้าสู่ระบบ"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-600 mb-1">สถานะผู้ใช้งาน (Role)</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+                >
+                  <option value="user">🎓 นักศึกษา (User)</option>
+                  <option value="admin">🛡️ เจ้าหน้าที่ (Admin)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs cursor-pointer">ยกเลิก</button>
+              <button type="submit" className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer">บันทึกบัญชี</button>
+            </div>
+          </form>
         </div>
       )}
 
