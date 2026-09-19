@@ -1,0 +1,13 @@
+{
+  "name": "project-mockup",
+  "private": true,
+  "scripts": {
+    "dev:admin": "npm run dev --prefix FeatureAdmin",
+    "dev:user": "npm run dev --prefix FeatureUser",
+    "dev:backend": "node --watch FeatureBackend/server.js",
+    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:user\" \"npm run dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # 1. MariaDB Service
+  db:
+    image: mariadb:latest
+    container_name: mockup_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mockup_db
+      MYSQL_USER: user_app
+      MYSQL_PASSWORD: userpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # 2. phpMyAdmin Service (จัดการ DB ผ่านหน้าเว็บ)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: mockup_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpassword
+    depends_on:
+      - db
+
+volumes:
+  db_data:
