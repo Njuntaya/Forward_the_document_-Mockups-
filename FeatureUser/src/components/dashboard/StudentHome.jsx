@@ -16,8 +16,9 @@ export default function StudentHome({ user, announcements = [], onNavigate }) {
           </p>
         </div>
 
+        {/* 📌 จุดที่แก้ไข: เติม / หน้า new-request */}
         <button
-          onClick={() => onNavigate('new-request')}
+          onClick={() => onNavigate('/new-request')}
           className="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
         >
           <span>📝</span> เริ่มยื่นคำร้องใหม่

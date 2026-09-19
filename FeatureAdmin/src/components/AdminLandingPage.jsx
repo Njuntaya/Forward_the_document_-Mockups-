@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import AdminHome from './dashboard/AdminHome';
 import AdminAnnouncements from './dashboard/AdminAnnouncements';
+import NotFound from './auth/NotFound';
 
 const socket = io('http://localhost:5000');
 
 export default function AdminLandingPage({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('home');
-
   const [requests, setRequests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [filterStatus, setFilterStatus] = useState('pending');
@@ -26,13 +26,24 @@ export default function AdminLandingPage({ user, onLogout }) {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', name: '', password: '', role: 'user' });
 
+  const navigate = useNavigate();
+  const location = useLocation(); // 📌 ใช้เช็ก path ปัจจุบันแทน activeTab
+
   useEffect(() => {
     fetchRequests();
     fetchUsers();
     fetchAnnouncements();
 
-    socket.on('initial_requests', (data) => setRequests(data || []));
-    socket.on('request_updated', (data) => setRequests(data || []));
+    socket.on('initial_requests', (data) => {
+      console.log('🛡️ [Admin] โหลดข้อมูลคำร้องเริ่มต้น:', data);
+      setRequests(data || []);
+    });
+
+    socket.on('request_updated', (data) => {
+      console.log('🔄 [Admin] มีการอัปเดตคำร้องใหม่เข้ามาผ่าน Socket:', data);
+      setRequests(data || []);
+    });
+
     socket.on('initial_announcements', (data) => setAnnouncements(data || []));
     socket.on('announcements_updated', (data) => setAnnouncements(data || []));
 
@@ -212,8 +223,9 @@ export default function AdminLandingPage({ user, onLogout }) {
     );
   }
 
+  // 📌 ปรับการกรองข้อมูลโดยเช็กจาก Path ปัจจุบัน
   const filteredRequests = (requests || []).filter(req => {
-    if (activeTab === 'delivery') {
+    if (location.pathname.includes('/delivery')) {
       return req.status === 'approved';
     }
     const matchStatus = filterStatus === 'all' ? true : req.status === filterStatus;
@@ -233,6 +245,12 @@ export default function AdminLandingPage({ user, onLogout }) {
   const pendingCount = (requests || []).filter(r => r.status === 'pending').length;
   const deliveryCount = (requests || []).filter(r => r.status === 'approved').length;
 
+  // ฟังก์ชันกำหนดสีปุ่ม
+  const getNavClass = (isActive) => 
+    `w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+      isActive ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    }`;
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col md:flex-row font-sans">
       
@@ -251,65 +269,42 @@ export default function AdminLandingPage({ user, onLogout }) {
           <nav className="space-y-2">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">เมนูหลัก</p>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('home')}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                activeTab === 'home' ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="text-base">🏠</span> หน้าหลัก (Overview)
-            </button>
+            {/* 📌 เปลี่ยน Button เป็น NavLink */}
+            <NavLink to="/home" className={({ isActive }) => getNavClass(isActive)}>
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">🏠</span> หน้าหลัก (Overview)
+              </div>
+            </NavLink>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('requests')}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                activeTab === 'requests' ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
+            <NavLink to="/requests" className={({ isActive }) => getNavClass(isActive)}>
               <div className="flex items-center gap-2.5">
                 <span className="text-base">📋</span> จัดการคำร้อง
               </div>
               {pendingCount > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingCount}</span>
               )}
-            </button>
+            </NavLink>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('delivery')}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                activeTab === 'delivery' ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
+            <NavLink to="/delivery" className={({ isActive }) => getNavClass(isActive)}>
               <div className="flex items-center gap-2.5">
                 <span className="text-base">📅</span> ตารางนัดหมายส่งมอบ
               </div>
               {deliveryCount > 0 && (
                 <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{deliveryCount}</span>
               )}
-            </button>
+            </NavLink>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('announcements')}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                activeTab === 'announcements' ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="text-base">📢</span> จัดการประชาสัมพันธ์
-            </button>
+            <NavLink to="/announcements" className={({ isActive }) => getNavClass(isActive)}>
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">📢</span> จัดการประชาสัมพันธ์
+              </div>
+            </NavLink>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('users')}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-                activeTab === 'users' ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="text-base">👥</span> จัดการบัญชีผู้ใช้
-            </button>
+            <NavLink to="/users" className={({ isActive }) => getNavClass(isActive)}>
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">👥</span> จัดการบัญชีผู้ใช้
+              </div>
+            </NavLink>
           </nav>
         </div>
 
@@ -326,194 +321,198 @@ export default function AdminLandingPage({ user, onLogout }) {
       </aside>
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
-        
-        {activeTab === 'home' && (
-          <AdminHome user={user} requests={requests} usersList={usersList} onNavigate={(tab) => setActiveTab(tab)} />
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          
+          <Route path="/home" element={
+            <AdminHome user={user} requests={requests} usersList={usersList} onNavigate={(path) => navigate(path)} />
+          } />
 
-        {activeTab === 'announcements' && (
-          <AdminAnnouncements announcements={announcements} socket={socket} user={user} />
-        )}
+          <Route path="/announcements" element={
+            <AdminAnnouncements announcements={announcements} socket={socket} user={user} />
+          } />
 
-        {activeTab === 'delivery' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-800">📅 ตารางนัดหมายและกำหนดการส่งมอบเอกสาร</h2>
-              <p className="text-xs text-slate-400 mt-0.5">รายการคำร้องที่ได้รับการอนุมัติและนัดหมายวันเวลาส่งมอบแล้ว</p>
-            </div>
-
-            {filteredRequests.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm">
-                <div className="text-4xl mb-3">📭</div>
-                <h3 className="text-base font-bold text-slate-700">ไม่มีรายการนัดหมายส่งมอบในขณะนี้</h3>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredRequests.map((req) => (
-                  <div key={req.id} className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-md">{req.id}</span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">🟢 อนุมัติแล้ว / รอนำส่ง</span>
-                      </div>
-                      <h3 className="text-base font-bold text-slate-800">{req.docType}</h3>
-                      <p className="text-xs text-slate-600"><strong>ผู้ยื่น:</strong> {req.studentName} (รหัส: {req.studentId})</p>
-                      
-                      <div className="mt-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold space-y-1">
-                        <p>📅 <strong>กำหนดนัดหมาย:</strong> {req.deliverySchedule || 'ยังไม่ได้ระบุ'}</p>
-                        {req.adminFeedback && <p>💬 <strong>หมายเหตุ:</strong> {req.adminFeedback}</p>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'requests' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Route path="/delivery" element={
+            <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-extrabold text-slate-800">📋 รายการคำร้องทั้งหมด</h2>
-                <p className="text-xs text-slate-400 mt-0.5">ตรวจสอบและอนุมัติคำร้องจากนักศึกษา</p>
+                <h2 className="text-xl font-extrabold text-slate-800">📅 ตารางนัดหมายและกำหนดการส่งมอบเอกสาร</h2>
+                <p className="text-xs text-slate-400 mt-0.5">รายการคำร้องที่ได้รับการอนุมัติและนัดหมายวันเวลาส่งมอบแล้ว</p>
               </div>
-              <button type="button" onClick={handleResetAllRequests} className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white text-xs font-bold transition-all cursor-pointer border border-red-200">🗑️ Reset คำร้องทั้งหมด</button>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div onClick={() => setFilterStatus('all')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'all' ? 'bg-white border-slate-800 shadow-md' : 'bg-white/60 border-slate-200'}`}>
-                <p className="text-xs text-slate-500 font-medium">คำร้องทั้งหมด</p>
-                <p className="text-2xl font-extrabold text-slate-800 mt-1">{requests.length}</p>
-              </div>
-              <div onClick={() => setFilterStatus('pending')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'pending' ? 'bg-amber-50 border-amber-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
-                <p className="text-xs text-amber-700 font-medium">🟡 รอการตรวจสอบ</p>
-                <p className="text-2xl font-extrabold text-amber-600 mt-1">{pendingCount}</p>
-              </div>
-              <div onClick={() => setFilterStatus('approved')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'approved' ? 'bg-emerald-50 border-emerald-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
-                <p className="text-xs text-emerald-700 font-medium">🟢 อนุมัติแล้ว</p>
-                <p className="text-2xl font-extrabold text-emerald-600 mt-1">{deliveryCount}</p>
-              </div>
-              <div onClick={() => setFilterStatus('rejected')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'rejected' ? 'bg-red-50 border-red-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
-                <p className="text-xs text-red-700 font-medium">🔴 ปฏิเสธแล้ว</p>
-                <p className="text-2xl font-extrabold text-red-600 mt-1">{requests.filter(r => r.status === 'rejected').length}</p>
-              </div>
-            </div>
-
-            {filteredRequests.length === 0 ? (
-              <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-2xl mx-auto shadow-sm">
-                <div className="text-4xl mb-3">📭</div>
-                <h3 className="text-base font-bold text-slate-700">ไม่พบรายการคำร้อง</h3>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredRequests.map((req) => (
-                  <div key={req.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-md">{req.id}</span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' : req.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                          {req.status === 'pending' ? '🟡 รอตรวจสอบ' : req.status === 'approved' ? '🟢 อนุมัติแล้ว' : '🔴 ปฏิเสธ'}
-                        </span>
+              {filteredRequests.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm">
+                  <div className="text-4xl mb-3">📭</div>
+                  <h3 className="text-base font-bold text-slate-700">ไม่มีรายการนัดหมายส่งมอบในขณะนี้</h3>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredRequests.map((req) => (
+                    <div key={req.id} className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-md">{req.id}</span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">🟢 อนุมัติแล้ว / รอนำส่ง</span>
+                        </div>
+                        <h3 className="text-base font-bold text-slate-800">{req.docType}</h3>
+                        <p className="text-xs text-slate-600"><strong>ผู้ยื่น:</strong> {req.studentName} (รหัส: {req.studentId})</p>
+                        
+                        <div className="mt-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold space-y-1">
+                          <p>📅 <strong>กำหนดนัดหมาย:</strong> {req.deliverySchedule || 'ยังไม่ได้ระบุ'}</p>
+                          {req.adminFeedback && <p>💬 <strong>หมายเหตุ:</strong> {req.adminFeedback}</p>}
+                        </div>
                       </div>
-                      <h3 className="text-base font-bold text-slate-800">{req.docType}</h3>
-                      <p className="text-xs text-slate-600"><strong>ผู้ยื่น:</strong> {req.studentName} (รหัส: {req.studentId})</p>
                     </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                      <button type="button" onClick={() => { setSelectedRequest(req); setFieldFeedbacks({}); setRejectGeneralReason(''); setDeliverySchedule(''); setAdminFeedback(''); }} className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">🔍 ตรวจสอบ</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          } />
+
+          <Route path="/requests" element={
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-800">📋 รายการคำร้องทั้งหมด</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">ตรวจสอบและอนุมัติคำร้องจากนักศึกษา</p>
+                </div>
+                <button type="button" onClick={handleResetAllRequests} className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white text-xs font-bold transition-all cursor-pointer border border-red-200">🗑️ Reset คำร้องทั้งหมด</button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div onClick={() => setFilterStatus('all')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'all' ? 'bg-white border-slate-800 shadow-md' : 'bg-white/60 border-slate-200'}`}>
+                  <p className="text-xs text-slate-500 font-medium">คำร้องทั้งหมด</p>
+                  <p className="text-2xl font-extrabold text-slate-800 mt-1">{requests.length}</p>
+                </div>
+                <div onClick={() => setFilterStatus('pending')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'pending' ? 'bg-amber-50 border-amber-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
+                  <p className="text-xs text-amber-700 font-medium">🟡 รอการตรวจสอบ</p>
+                  <p className="text-2xl font-extrabold text-amber-600 mt-1">{pendingCount}</p>
+                </div>
+                <div onClick={() => setFilterStatus('approved')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'approved' ? 'bg-emerald-50 border-emerald-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
+                  <p className="text-xs text-emerald-700 font-medium">🟢 อนุมัติแล้ว</p>
+                  <p className="text-2xl font-extrabold text-emerald-600 mt-1">{deliveryCount}</p>
+                </div>
+                <div onClick={() => setFilterStatus('rejected')} className={`p-4 rounded-2xl border cursor-pointer transition-all ${filterStatus === 'rejected' ? 'bg-red-50 border-red-400 shadow-md' : 'bg-white/60 border-slate-200'}`}>
+                  <p className="text-xs text-red-700 font-medium">🔴 ปฏิเสธแล้ว</p>
+                  <p className="text-2xl font-extrabold text-red-600 mt-1">{requests.filter(r => r.status === 'rejected').length}</p>
+                </div>
+              </div>
+
+              {filteredRequests.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-2xl mx-auto shadow-sm">
+                  <div className="text-4xl mb-3">📭</div>
+                  <h3 className="text-base font-bold text-slate-700">ไม่พบรายการคำร้อง</h3>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredRequests.map((req) => (
+                    <div key={req.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-md">{req.id}</span>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' : req.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {req.status === 'pending' ? '🟡 รอตรวจสอบ' : req.status === 'approved' ? '🟢 อนุมัติแล้ว' : '🔴 ปฏิเสธ'}
+                          </span>
+                        </div>
+                        <h3 className="text-base font-bold text-slate-800">{req.docType}</h3>
+                        <p className="text-xs text-slate-600"><strong>ผู้ยื่น:</strong> {req.studentName} (รหัส: {req.studentId})</p>
+                      </div>
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                        <button type="button" onClick={() => { setSelectedRequest(req); setFieldFeedbacks({}); setRejectGeneralReason(''); setDeliverySchedule(''); setAdminFeedback(''); }} className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">🔍 ตรวจสอบ</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'users' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-800">👥 จัดการบัญชีผู้ใช้งานระบบ</h2>
-                <p className="text-xs text-slate-400 mt-0.5">เพิ่ม ลบ หรือแก้ไขข้อมูลบัญชีผู้ใช้งานในระบบ</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddUserModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-sm transition-all cursor-pointer"
-              >
-                + เพิ่มบัญชีผู้ใช้ใหม่
-              </button>
+                  ))}
+                </div>
+              )}
             </div>
+          } />
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <input
-                type="text"
-                placeholder="🔍 ค้นหาด้วยรหัสนักศึกษา หรือ ชื่อ-นามสกุล..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
+          <Route path="/users" element={
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-800">👥 จัดการบัญชีผู้ใช้งานระบบ</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">เพิ่ม ลบ หรือแก้ไขข้อมูลบัญชีผู้ใช้งานในระบบ</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(true)}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-sm transition-all cursor-pointer"
+                >
+                  + เพิ่มบัญชีผู้ใช้ใหม่
+                </button>
+              </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                      <th className="p-4">รหัสนักศึกษา / Username</th>
-                      <th className="p-4">ชื่อ - นามสกุล</th>
-                      <th className="p-4">สถานะ (Role)</th>
-                      <th className="p-4 text-right">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="p-8 text-center text-slate-400">ไม่พบข้อมูลผู้ใช้งานในระบบ</td>
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <input
+                  type="text"
+                  placeholder="🔍 ค้นหาด้วยรหัสนักศึกษา หรือ ชื่อ-นามสกุล..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                        <th className="p-4">รหัสนักศึกษา / Username</th>
+                        <th className="p-4">ชื่อ - นามสกุล</th>
+                        <th className="p-4">สถานะ (Role)</th>
+                        <th className="p-4 text-right">จัดการ</th>
                       </tr>
-                    ) : (
-                      filteredUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="p-4 font-mono font-bold text-slate-700">{u.username}</td>
-                          <td className="p-4 font-semibold text-slate-800">{u.name}</td>
-                          <td className="p-4">
-                            <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}`}>
-                              {u.role === 'admin' ? '🛡️ Admin' : '🎓 User'}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right space-x-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleEditName(u.id, u.name)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
-                            >
-                              ✏️ แก้ไขชื่อ
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleResetPassword(u.username)}
-                              className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold cursor-pointer"
-                            >
-                              🔑 เปลี่ยนรหัส
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteUser(u.id, u.username)}
-                              className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold cursor-pointer border border-red-100"
-                            >
-                              🗑️ ลบ
-                            </button>
-                          </td>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="p-8 text-center text-slate-400">ไม่พบข้อมูลผู้ใช้งานในระบบ</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredUsers.map((u) => (
+                          <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="p-4 font-mono font-bold text-slate-700">{u.username}</td>
+                            <td className="p-4 font-semibold text-slate-800">{u.name}</td>
+                            <td className="p-4">
+                              <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}`}>
+                                {u.role === 'admin' ? '🛡️ Admin' : '🎓 User'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right space-x-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleEditName(u.id, u.name)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer"
+                              >
+                                ✏️ แก้ไขชื่อ
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleResetPassword(u.username)}
+                                className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold cursor-pointer"
+                              >
+                                🔑 เปลี่ยนรหัส
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUser(u.id, u.username)}
+                                className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-600 text-red-600 hover:text-white font-bold cursor-pointer border border-red-100"
+                              >
+                                🗑️ ลบ
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          } />
 
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
 
       {/* Modal ตรวจสอบคำร้อง (ดีไซน์ใหม่เรียบหรูและใช้งานง่าย) */}

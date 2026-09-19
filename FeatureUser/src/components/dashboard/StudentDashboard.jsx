@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom'; // 📌 เพิ่ม Navigate
 import { io } from 'socket.io-client';
+
+// 📌 Import Components 
 import StudentHome from './StudentHome';
 import RequestForm from './RequestForm';
 import StatusTracking from './StatusTracking';
 import RequestHistory from './RequestHistory';
+import NotFound from '../auth/NotFound';
 
 const socket = io('http://localhost:5000');
 
 export default function StudentDashboard({ user, onLogout, onBackToHome }) {
-  const [activeTab, setActiveTab] = useState('home');
   const [requests, setRequests] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [editingRequest, setEditingRequest] = useState(null);
+  
+  const navigate = useNavigate();
 
+  // 🔄 ดึงข้อมูลจาก API และ Socket.io
   useEffect(() => {
     fetch('http://localhost:5000/api/requests')
       .then(res => res.json())
@@ -41,6 +47,7 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
     };
   }, []);
 
+  // 🛑 กรณีไม่มีข้อมูล User ให้แสดงหน้าแจ้งเตือนให้เข้าสู่ระบบใหม่
   if (!user) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 font-sans">
@@ -60,7 +67,7 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
     );
   }
 
-  // 🌟 จุดที่แก้ไข: ตรวจสอบทั้ง studentId และชื่อ เพื่อให้ข้อมูลแสดงผลชัวร์ 100% แม้รหัสจะไม่ตรงกันเป๊ะ
+  // 🔍 กรองข้อมูลคำร้องให้แสดงเฉพาะของนักศึกษาที่ล็อกอิน
   const currentStudentId = String(user?.username || '').trim().toLowerCase();
   const currentStudentName = String(user?.name || '').trim().toLowerCase();
   
@@ -73,14 +80,22 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
   const pendingRequests = myRequests.filter(r => r.status === 'pending');
   const completedRequests = myRequests.filter(r => r.status !== 'pending');
 
+  // 🎨 ฟังก์ชันกำหนดสไตล์ให้ NavLink เปลี่ยนสีเมื่อ URL ตรงกับเมนู
+  const navLinkStyle = ({ isActive }) => 
+    `px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 ${
+      isActive ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
+    }`;
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
       
+      {/* 🟢 Header & Navbar */}
       <header className="bg-gradient-to-r from-[#3b1f0e] to-[#6b3a1f] text-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
-            <div className="flex items-center gap-3">
+            {/* 🎓 โลโก้ */}
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/home')}>
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl backdrop-blur-sm border border-white/20">
                 🎓
               </div>
@@ -90,53 +105,31 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
               </div>
             </div>
 
+            {/* 🧭 เมนูนำทาง (ใช้ NavLink เพื่อจัดการ Route) */}
             <nav className="flex items-center gap-1 sm:gap-2">
-              <button
-                type="button"
-                onClick={() => { setActiveTab('home'); setEditingRequest(null); }}
-                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'home' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
+              <NavLink to="/home" className={navLinkStyle} onClick={() => setEditingRequest(null)}>
                 <span>🏠</span> หน้าแรก
-              </button>
+              </NavLink>
 
-              <button
-                type="button"
-                onClick={() => { setActiveTab('new-request'); setEditingRequest(null); }}
-                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'new-request' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
+              <NavLink to="/new-request" className={navLinkStyle} onClick={() => setEditingRequest(null)}>
                 <span>📝</span> ยื่นคำร้องใหม่
-              </button>
+              </NavLink>
 
-              <button
-                type="button"
-                onClick={() => { setActiveTab('tracking'); setEditingRequest(null); }}
-                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer relative ${
-                  activeTab === 'tracking' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
+              <NavLink to="/tracking" className={navLinkStyle} onClick={() => setEditingRequest(null)}>
                 <span>📬</span> ติดตามสถานะ
                 {pendingRequests.length > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1">
                     {pendingRequests.length}
                   </span>
                 )}
-              </button>
+              </NavLink>
 
-              <button
-                type="button"
-                onClick={() => { setActiveTab('history'); setEditingRequest(null); }}
-                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'history' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
+              <NavLink to="/history" className={navLinkStyle} onClick={() => setEditingRequest(null)}>
                 <span>📜</span> ประวัติคำร้อง
-              </button>
+              </NavLink>
             </nav>
 
+            {/* 👤 ข้อมูลผู้ใช้และปุ่มออก */}
             <div className="flex items-center gap-2 border-l border-white/15 pl-3">
               <div className="text-right hidden xl:block mr-1">
                 <p className="text-xs font-bold text-amber-100">{user?.name}</p>
@@ -166,38 +159,52 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
         </div>
       </header>
 
+      {/* 🟡 พื้นที่แสดงเนื้อหาหลัก โดยจะเปลี่ยนเนื้อหาตาม URL */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {activeTab === 'home' && (
-          <StudentHome user={user} announcements={announcements} onNavigate={(tab) => setActiveTab(tab)} />
-        )}
+        <Routes>
+          {/* 📌 เมื่อเข้า URL ว่างๆ (/) ให้เด้งไปที่ /home อัตโนมัติ */}
+          <Route path="/" element={<Navigate to="/home" replace />} />
 
-        {activeTab === 'new-request' && (
-          <RequestForm 
-            user={user} 
-            socket={socket} 
-            editData={editingRequest}
-            onSuccess={() => {
-              setEditingRequest(null);
-              setActiveTab('tracking');
-            }} 
-          />
-        )}
+          <Route path="/home" element={
+            <StudentHome 
+              user={user} 
+              announcements={announcements} 
+              onNavigate={(path) => navigate(path)} 
+            />
+          } />
+          
+          <Route path="/new-request" element={
+            <RequestForm 
+              user={user} 
+              socket={socket} 
+              editData={editingRequest}
+              onSuccess={() => {
+                setEditingRequest(null);
+                navigate('/tracking'); // ยื่นเสร็จแล้วพาไปหน้าติดตามสถานะ
+              }} 
+            />
+          } />
 
-        {activeTab === 'tracking' && (
-          <StatusTracking requests={pendingRequests} socket={socket} />
-        )}
+          <Route path="/tracking" element={
+            <StatusTracking requests={pendingRequests} socket={socket} />
+          } />
+          
+          <Route path="/history" element={
+            <RequestHistory 
+              requests={completedRequests} 
+              onEditAndResubmit={(reqToEdit) => {
+                setEditingRequest(reqToEdit);
+                navigate('/new-request'); // ส่งข้อมูลกลับไปแก้ไขที่หน้าฟอร์ม
+              }} 
+            />
+          } />
 
-        {activeTab === 'history' && (
-          <RequestHistory 
-            requests={completedRequests} 
-            onEditAndResubmit={(reqToEdit) => {
-              setEditingRequest(reqToEdit);
-              setActiveTab('new-request');
-            }} 
-          />
-        )}
+          {/* 📌 หน้า 404 สำหรับจัดการ URL ย่อยที่ไม่มีในระบบ */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
 
+      {/* 🔵 Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
         © 2567 สำนักส่งเสริมวิชาการและงานทะเบียน · มหาวิทยาลัยเทคโนโลยีราชมงคล
       </footer>
