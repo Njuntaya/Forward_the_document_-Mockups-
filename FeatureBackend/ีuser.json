@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "username": "660610001",
+    "password": "password123",
+    "name": "นายกิตติศักดิ์ ใจดี",
+    "role": "user"
+  },
+  {
+    "id": 2,
+    "username": "admin01",
+    "password": "password123",
+    "name": "สมชาย เจ้าหน้าที่",
+    "role": "admin"
+  }
+]
