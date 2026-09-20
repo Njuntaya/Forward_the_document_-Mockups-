@@ -27,23 +27,15 @@ export default function AdminLandingPage({ user, onLogout }) {
   const [newUser, setNewUser] = useState({ username: '', name: '', password: '', role: 'user' });
 
   const navigate = useNavigate();
-  const location = useLocation(); // 📌 ใช้เช็ก path ปัจจุบันแทน activeTab
+  const location = useLocation(); 
 
   useEffect(() => {
     fetchRequests();
     fetchUsers();
     fetchAnnouncements();
 
-    socket.on('initial_requests', (data) => {
-      console.log('🛡️ [Admin] โหลดข้อมูลคำร้องเริ่มต้น:', data);
-      setRequests(data || []);
-    });
-
-    socket.on('request_updated', (data) => {
-      console.log('🔄 [Admin] มีการอัปเดตคำร้องใหม่เข้ามาผ่าน Socket:', data);
-      setRequests(data || []);
-    });
-
+    socket.on('initial_requests', (data) => setRequests(data || []));
+    socket.on('request_updated', (data) => setRequests(data || []));
     socket.on('initial_announcements', (data) => setAnnouncements(data || []));
     socket.on('announcements_updated', (data) => setAnnouncements(data || []));
 
@@ -82,40 +74,48 @@ export default function AdminLandingPage({ user, onLogout }) {
     }
   };
 
-  const handleUpdateStatus = (requestId, newStatus) => {
+  // 📌 เปลี่ยนมาใช้ Axios สำหรับยิง API เพื่ออัปเดตคำร้อง
+  const handleUpdateStatus = async (requestId, newStatus) => {
+    let payload = {};
+
     if (newStatus === 'approved') {
       if (!deliverySchedule.trim()) {
         alert('กรุณาระบุวันเวลานัดหมายส่งมอบเอกสารก่อนอนุมัติ');
         return;
       }
-      if (window.confirm(`คุณต้องการอนุมัติพร้อมกำหนดเวลานัดหมายใช่หรือไม่?`)) {
-        socket.emit('update_status', { 
-          requestId, 
-          status: 'approved', 
-          feedback: '', 
-          fieldFeedbacks: {},
-          deliverySchedule: deliverySchedule.trim(),
-          adminFeedback: adminFeedback.trim()
-        });
+      if (!window.confirm(`คุณต้องการอนุมัติพร้อมกำหนดเวลานัดหมายใช่หรือไม่?`)) return;
+      
+      payload = {
+        status: 'approved', 
+        feedback: '', 
+        fieldFeedbacks: {},
+        deliverySchedule: deliverySchedule.trim(),
+        adminFeedback: adminFeedback.trim()
+      };
+    } else if (newStatus === 'rejected') {
+      if (!window.confirm(`ยืนยันการปฏิเสธคำร้องพร้อมส่งรายการแก้ไขให้ผู้ใช้?`)) return;
+      
+      payload = {
+        status: 'rejected', 
+        feedback: rejectGeneralReason.trim() || 'กรุณาแก้ไขข้อมูลตามจุดที่ระบุสีแดง', 
+        fieldFeedbacks,
+        deliverySchedule: '',
+        adminFeedback: ''
+      };
+    }
+
+    try {
+      const res = await axios.put(`http://localhost:5000/api/requests/${requestId}`, payload);
+      if (res.data.success) {
         setSelectedRequest(null);
         setFieldFeedbacks({});
         setDeliverySchedule('');
         setAdminFeedback('');
-      }
-    } else if (newStatus === 'rejected') {
-      if (window.confirm(`ยืนยันการปฏิเสธคำร้องพร้อมส่งรายการแก้ไขให้ผู้ใช้?`)) {
-        socket.emit('update_status', { 
-          requestId, 
-          status: 'rejected', 
-          feedback: rejectGeneralReason.trim() || 'กรุณาแก้ไขข้อมูลตามจุดที่ระบุสีแดง', 
-          fieldFeedbacks,
-          deliverySchedule: '',
-          adminFeedback: ''
-        });
-        setSelectedRequest(null);
-        setFieldFeedbacks({});
         setRejectGeneralReason('');
       }
+    } catch (error) {
+      alert(error.response?.data?.message || 'เกิดข้อผิดพลาดในการอัปเดตคำร้อง');
+      console.error(error);
     }
   };
 
@@ -223,7 +223,6 @@ export default function AdminLandingPage({ user, onLogout }) {
     );
   }
 
-  // 📌 ปรับการกรองข้อมูลโดยเช็กจาก Path ปัจจุบัน
   const filteredRequests = (requests || []).filter(req => {
     if (location.pathname.includes('/delivery')) {
       return req.status === 'approved';
@@ -245,7 +244,6 @@ export default function AdminLandingPage({ user, onLogout }) {
   const pendingCount = (requests || []).filter(r => r.status === 'pending').length;
   const deliveryCount = (requests || []).filter(r => r.status === 'approved').length;
 
-  // ฟังก์ชันกำหนดสีปุ่ม
   const getNavClass = (isActive) => 
     `w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
       isActive ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -269,7 +267,6 @@ export default function AdminLandingPage({ user, onLogout }) {
           <nav className="space-y-2">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">เมนูหลัก</p>
 
-            {/* 📌 เปลี่ยน Button เป็น NavLink */}
             <NavLink to="/home" className={({ isActive }) => getNavClass(isActive)}>
               <div className="flex items-center gap-2.5">
                 <span className="text-base">🏠</span> หน้าหลัก (Overview)
@@ -515,7 +512,6 @@ export default function AdminLandingPage({ user, onLogout }) {
         </Routes>
       </main>
 
-      {/* Modal ตรวจสอบคำร้อง (ดีไซน์ใหม่เรียบหรูและใช้งานง่าย) */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 p-6 space-y-6">
