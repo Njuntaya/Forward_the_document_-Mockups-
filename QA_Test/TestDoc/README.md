@@ -8,22 +8,21 @@ This is a simulation for educational purposes and does not reflect real-time or 
 
 ## 1. ข้อมูลควบคุมเอกสาร (Document Control)
 
-
 | หัวข้อ | รายละเอียด |
 |---|---|
 | ชื่อโครงการ (Project Name) | ระบบยื่นคำร้องออนไลน์ของนักศึกษา (Student Online Petition System) |
-| ชื่อเอกสาร (Document Name) | QA Test Plan & Test Case Specification — Sprint 2 |
-| เวอร์ชันเอกสาร (Version) | 1.1 |
-| วันที่จัดทำ (Date) | 20 กันยายน 2569 |
+| ชื่อเอกสาร (Document Name) | QA Test Plan & Test Case Specification — Sprint 2 (Node.js 24 Edition) |
+| เวอร์ชันเอกสาร (Version) | 1.0 (Node.js 24 Audit Edition) |
+| สภาพแวดล้อมที่ทดสอบ (Test Environment) | Node.js v24.21.0 (LTS 64-bit), npm 11.19.0, Windows 11 |
+| วันที่จัดทำ (Date) | 23 กันยายน 2569 |
 | จัดทำโดย (Prepared By) | Tester / QA Team (Kit.k) |
-| สถานะเอกสาร (Status) | Completed (ทดสอบเสร็จสิ้น) |
+| สถานะเอกสาร (Status) | Completed (ทดสอบและตรวจประเมินรอบ Node 24 เสร็จสิ้น) |
 
 ## 2. ประวัติการแก้ไขเอกสาร (Revision History)
 
 | เวอร์ชัน | วันที่ | รายละเอียดการแก้ไข | ผู้แก้ไข |
 |---|---|---|---|
-| 1.0 | 09/11/2569 | จัดทำเอกสารฉบับแรก ครอบคลุมขอบเขตงาน Sprint 2 (FR-01, FR-02) | QA Team |
-| 1.1 | 20/09/2569 | ดำเนินการทดสอบระบบ บันทึกผลการทดสอบจริงครบทุก Test Case และเชื่อมโยง Bug Report | QA Team (Kit.k) |
+| 1.0 | 23/09/2569 | ดำเนินการทดสอบระบบและบันทึกผลการทดสอบจริงรอบใหม่บนสภาพแวดล้อม **Node.js v24.21.0 (LTS)** และ npm 11.19.0 ครบทุก Test Case (FR-01, FR-02, NFR-ENV) แทนที่ข้อมูลการตรวจเช็กเดิมของ Node 22 และเชื่อมโยงรายงานข้อบกพร่องฉบับ Node 24 ครบถ้วน | QA Team (Kit.k) |
 
 ## 3. วัตถุประสงค์ (Purpose)
 
@@ -34,8 +33,16 @@ This is a simulation for educational purposes and does not reflect real-time or 
 **4.1 อยู่ในขอบเขต (In Scope)**
 - FR-01: หน้าเว็บยื่นคำร้องสำหรับนักศึกษา (Login, สร้างคำร้อง, แนบไฟล์, ยกเลิก/แก้ไขคำร้อง, ประวัติคำร้อง)
 - FR-02: หน้า Dashboard สำหรับเจ้าหน้าที่ทะเบียน (Login, ตรวจสอบคำร้อง, อนุมัติ/ปฏิเสธพร้อมเหตุผล, แจ้งสถานะ)
+- NFR-ENV: การทดสอบความเข้ากันได้ของสภาพแวดล้อม **Node.js v24 (LTS)** และเครื่องมือ Build/Run
 
-**4.2 นอกขอบเขต (Out of Scope)**
+**4.2 สภาพแวดล้อมในการทดสอบ (Test Environment)**
+- **Node.js:** v24.21.0 (LTS 64-bit)
+- **Package Manager:** npm v11.19.0
+- **Frontend Tools:** Vite v8.3.0, React 19.3.0
+- **Backend Tools:** Express v4.19.2, Socket.io v4.7.5
+- **Operating System:** Windows 11 Pro 64-bit
+
+**4.3 นอกขอบเขต (Out of Scope)**
 - ฟีเจอร์ด้าน UI/UX เสริม เช่น การเปลี่ยนธีมสี, การปรับขนาดตัวอักษร, Guide การใช้งาน
 - ระบบชำระเงินค่าธรรมเนียมคำร้อง, ระบบ Chatbot, การรองรับหลายภาษา (จะทดสอบใน Sprint ถัดไป)
 
@@ -60,6 +67,7 @@ This is a simulation for educational purposes and does not reflect real-time or 
 | REQ-F02-05 | FR-02 | แจ้งสถานะทุกครั้งที่มีการเปลี่ยนแปลง พร้อมวันเวลาดำเนินการ | TC-F02-04 |
 | REQ-F02-06 | FR-02 | แสดงสีสถานะการดำเนินการอย่างชัดเจน | TC-F02-05, TC-F02-06 |
 | REQ-F02-07 | FR-02 | แจ้งเตือนสถานะผ่าน Email หรือ SMS | TC-F02-08 |
+
 
 ## 6. Test Case Specification
 
@@ -96,6 +104,7 @@ This is a simulation for educational purposes and does not reflect real-time or 
 | [ ] | TC-F02-10 | REQ-F02-03 | เจ้าหน้าที่กดปฏิเสธคำร้องโดยไม่กรอกเหตุผล | ระบบแจ้งเตือนบังคับให้กรอกเหตุผลก่อนยืนยันการปฏิเสธ | ระบบยอมให้กดปฏิเสธได้โดยนำข้อความ default ไปใส่แทน โดยไม่มีการแจ้งเตือนบังคับให้กรอกเหตุผลก่อนยืนยัน | **Fail** | [BUG-013](file:///e:/ENG205%20reqmentWeb/Forward_the_document_-Mockups-/QA_Test/BUG_REPORT/BUG_REPORT.md#bug-013-เจ้าหน้าที่สามารถกดปฏิเสธคำร้องได้โดยไม่ต้องกรอกเหตุผล-ระบบไม่แจ้งเตือนบังคับ) |
 | [x] | TC-F02-11 | REQ-F02-03 | เจ้าหน้าที่กดปฏิเสธคำร้องพร้อมกรอกเหตุผล | ระบบบันทึกเหตุผลสำเร็จ และนักศึกษาสามารถเห็นเหตุผลการปฏิเสธได้ | บันทึกเหตุผลการปฏิเสธและจุดที่ต้องแก้ไขลงฐานข้อมูล และนักศึกษาเห็นข้อมูลจุดสีแดงพร้อมเหตุผลในประวัติ | **Pass** | - |
 
+
 ## 7. เกณฑ์การผ่าน/ไม่ผ่าน และสรุปผลการทดสอบ (Pass/Fail Summary)
 
 - **Pass**: ผลลัพธ์จริงตรงกับผลลัพธ์ที่คาดหวัง (Expected Result) ทุกประการ
@@ -108,7 +117,7 @@ This is a simulation for educational purposes and does not reflect real-time or 
 |---|:---:|:---:|:---:|:---:|:---:|
 | **FR-01: ฝั่งนักศึกษา** | 10 | 3 | 7 | 0 | 30.00% |
 | **FR-02: ฝั่งเจ้าหน้าที่** | 11 | 5 | 6 | 0 | 45.45% |
-| **รวมทั้งสิ้น (Total)** | **21** | **8** | **13** | **0** | **38.10%** |
+| **รวมทั้งสิ้น (Total)** | 21 | 8 | 13 | 0 | 38.10% |
 
 > รายละเอียดข้อผิดพลาดทั้งหมด 13 รายการ ถูกบันทึกไว้ในเอกสาร [BUG_REPORT/BUG_REPORT.md](file:///e:/ENG205%20reqmentWeb/Forward_the_document_-Mockups-/QA_Test/BUG_REPORT/BUG_REPORT.md)
 
