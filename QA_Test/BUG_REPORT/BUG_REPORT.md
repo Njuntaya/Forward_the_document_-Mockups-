@@ -413,28 +413,6 @@ pie title สัดส่วนระดับความรุนแรงข�
   }
   ```
 
----
-
-### BUG-014: พบ Node.js v24 Runtime Deprecation Warning (DEP0060) และขาด Root Dependencies
-- **รหัสข้อผิดพลาด:** BUG-014
-- **วันที่รายงาน:** 08/11/2569 (08 พฤศจิกายน 2569)
-- **สภาพแวดล้อมที่พบ:** Node.js v24.21.0 (LTS 64-bit), npm 11.19.0, Windows 11
-- **Test Case ที่เกี่ยวข้อง:** TC-ENV-01
-- **Traceability Requirement:** NFR-Maintainability (Non-Functional Requirement)
-- **ระดับความรุนแรง:** Medium
-- **โมดูล/ไฟล์ที่พบปัญหา:** `package.json` (Root Workspace)
-- **ขั้นตอนการจำลองข้อผิดพลาด (Steps to Reproduce):**
-  1. ติดตั้งสภาพแวดล้อม Node.js v24.21.0
-  2. รันสคริปต์สตาร์ทระบบ `npm run dev` ที่โฟลเดอร์ Root
-- **ผลลัพธ์ที่คาดหวัง (Expected Result):**
-  ระบบรันเซอร์วิสทั้งหมดพร้อมกันโดยไม่มี Deprecation Warning หรือ Error จาก Node Runtime
-- **ผลลัพธ์ที่เกิดขึ้นจริง (Actual Result):**
-  พบ Runtime Deprecation Warning: `(node:xxx) [DEP0060] DeprecationWarning: The 'util._extend' API is deprecated` เกิดจาก `concurrently` เวอร์ชันเดิม
-- **แนวทางการแก้ไข (Suggested Fix):**
-  อัปเกรด `concurrently` ในรูท `package.json` ให้เป็นเวอร์ชันล่าสุด (`^9.1.2`) เพื่อให้เข้ากันได้กับ Node 24 อย่างสมบูรณ์
-
----
-
 
 ## 7. การลงนามอนุมัติ (Sign-off)
 
