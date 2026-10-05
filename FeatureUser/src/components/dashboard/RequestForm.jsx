@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 export default function RequestForm({ user, socket, onSuccess, editData }) {
-  const [requestCategory, setRequestCategory] = useState('doc'); // 'doc' = เอกสารการศึกษา, 'building' = ปรับปรุงอาคาร
+  const [requestCategory, setRequestCategory] = useState('doc'); 
   
-  // States สำหรับเอกสารการศึกษา
   const [docType, setDocType] = useState('หนังสือรับรองการเป็นนักศึกษา (ภาษาไทย)');
   const [copies, setCopies] = useState(1);
   const [purpose, setPurpose] = useState('');
@@ -17,7 +17,6 @@ export default function RequestForm({ user, socket, onSuccess, editData }) {
   const [address, setAddress] = useState('');
   const [slipImage, setSlipImage] = useState('');
 
-  // States สำหรับแจ้งซ่อมปรับปรุงอาคาร
   const [repairCategory, setRepairCategory] = useState('ไฟฟ้า');
   const [buildingName, setBuildingName] = useState('อาคาร 1 (วิศวกรรมศาสตร์)');
   const [roomNumber, setRoomNumber] = useState('');
@@ -63,10 +62,10 @@ export default function RequestForm({ user, socket, onSuccess, editData }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  // 📌 เปลี่ยนมาใช้ Axios สำหรับยิง API
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 🌟 ดึงข้อมูล User ให้ชัวร์ที่สุด (ป้องกันกรณี user เป็น null หรือไม่มี username)
     const currentStudentId = String(user?.username || '5555555555').trim();
     const currentStudentName = String(user?.name || 'นักศึกษา').trim();
 
@@ -107,14 +106,16 @@ export default function RequestForm({ user, socket, onSuccess, editData }) {
       payload.imageUrl = slipImage;
     }
 
-    console.log("📤 Submitting request payload via Socket:", payload);
-
-    if (socket) {
-      socket.emit('submit_request', payload);
-      alert('ส่งคำร้องสำเร็จเรียบร้อยแล้ว!');
-      if (onSuccess) onSuccess();
-    } else {
-      alert('เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ Server ได้');
+    try {
+      // ยิง POST ไปที่ Backend API
+      const res = await axios.post('http://localhost:5000/api/requests', payload);
+      if (res.data.success) {
+        alert('ส่งคำร้องสำเร็จเรียบร้อยแล้ว!');
+        if (onSuccess) onSuccess();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || 'เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อกับ Server ได้');
+      console.error(error);
     }
   };
 
