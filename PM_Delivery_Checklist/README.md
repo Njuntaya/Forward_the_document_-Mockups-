@@ -38,7 +38,8 @@ PM_Delivery_Checklist/
 
 | บทบาท | ชื่อ-นามสกุล / รหัส | หน้าที่หลัก |
 |---|---|---|
-| **Project Manager (PM)** | **Aungkanr.S** | ตรวจสอบรายการส่งมอบและประสานงานปิดโครงการ (PM.4) |
-| **Lead Developer** | **Natthawut Juntaya (Njuntaya)** | พัฒนาและส่งมอบระบบ Full-stack (React + Node.js) |
+| **Project Manager (PM)** | **PanuPong** | ตรวจสอบรายการส่งมอบและประสานงานปิดโครงการ (PM.4) |
+| **Lead Developer1** | **Natthawut Juntaya (Njuntaya)** | พัฒนาและส่งมอบระบบ Full-stack (React + Node.js) |
+| **Lead Developer2** | **Aungkanr.S** | พัฒนาและส่งมอบระบบ Full-stack (React + Node.js) |
 | **QA / Tester Lead** | **Kittitat Khantham (Kit.k)** | วางแผนและทดสอบระบบ (QA Test Plan & Bug Fix Verification) |
 | **Product Owner / อาจารย์ที่ปรึกษา** | **ดร. สัญญา เครือหงษ์ (Sunya.U)** | ตรวจรับผลงานและอนุมัติปิดโครงการ |

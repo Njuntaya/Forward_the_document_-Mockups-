@@ -15,8 +15,8 @@
 | **อ้างอิงกระบวนการ (Standard Process)** | ISO/IEC 29110 Basic Profile: **PM.4 Project Closure** (Task PM.4.1 ตรวจสอบรายการส่งมอบตาม Product Delivery Checklist ก่อนปิดโครงการ) และ **SI.6 Product Delivery** |
 | **เวอร์ชันเอกสาร (Version)** | 1.0 (Final Release & Project Closeout Edition) |
 | **วันที่ตรวจสอบ (Verification Date)** | 28 กุมภาพันธ์ 2570 |
-| **ผู้จัดทำและตรวจประเมิน (Evaluated By)** | ผู้จัดการโครงการ (Project Manager: Aungkanr.S) |
-| **ผู้ร่วมตรวจยืนยัน (Co-evaluated By)** | หัวหน้าฝ่ายพัฒนา (Lead Developer: Njuntaya) และ หัวหน้าฝ่ายทดสอบ (QA Lead: Kit.k) |
+| **ผู้จัดทำและตรวจประเมิน (Evaluated By)** | ผู้จัดการโครงการ (Project Manager: PanuPong) |
+| **ผู้ร่วมตรวจยืนยัน (Co-evaluated By)** | หัวหน้าฝ่ายพัฒนา 1 (Lead Developer1: Njuntaya) และ หัวหน้าฝ่ายพัฒนา 2 (Lead Developer2: Aungkanr.S) และ หัวหน้าฝ่ายทดสอบ (QA Lead: Kit.k) |
 | **ผู้ตรวจรับและอนุมัติ (Accepted By)** | Product Owner / อาจารย์ที่ปรึกษาโครงการ (Sunya.U) |
 | **สถานะเอกสาร (Document Status)** | **Approved / Project Closed (ผ่านการตรวจรับและอนุมัติปิดโครงการ)** |
 
@@ -26,9 +26,9 @@
 
 | เวอร์ชัน | วันที่ | รายละเอียดการปรับปรุง | ผู้รับผิดชอบ |
 |:---:|:---:|---|:---:|
-| 0.1 | 15/02/2570 | ยกร่างรายการตรวจสอบการส่งมอบผลิตภัณฑ์ตามขอบเขต Project Plan (T1.1) และ SRS | Project Manager (Aungkanr.S) |
+| 0.1 | 15/02/2570 | ยกร่างรายการตรวจสอบการส่งมอบผลิตภัณฑ์ตามขอบเขต Project Plan (T1.1) และ SRS | Project Manager (PanuPong) |
 | 0.2 | 23/02/2570 | ปรับปรุงหัวข้อการตรวจรับหลังการแก้ไขบั๊ก 13 รายการ (Node 24 LTS) จาก BUG_FIX.md | QA Lead (Kit.k) / PM |
-| 1.0 | 28/02/2570 | สรุปผลการตรวจสอบครบถ้วน 100% พร้อมบันทึกการส่งมอบและลงนามปิดโครงการ | Project Manager (Aungkanr.S) |
+| 1.0 | 28/02/2570 | สรุปผลการตรวจสอบครบถ้วน 100% พร้อมบันทึกการส่งมอบและลงนามปิดโครงการ | Project Manager (PanuPong) |
 
 ---
 
