@@ -77,8 +77,15 @@ export default function StudentDashboard({ user, onLogout, onBackToHome }) {
     return reqSid === currentStudentId || (currentStudentName && reqSname.includes(currentStudentName));
   });
   
-  const pendingRequests = myRequests.filter(r => r.status === 'pending');
-  const completedRequests = myRequests.filter(r => r.status !== 'pending');
+  // หน้าติดตามสถานะ — เฉพาะที่ยังต้องดำเนินการอยู่
+  const pendingRequests = myRequests.filter(r =>
+    ['pending', 'doc_sent', 'user_submitted', 'revision_needed'].includes(r.status)
+  );
+  
+  // หน้าประวัติ — รายการที่ปิดแล้ว + นัดหมายแล้ว (รอรับเอกสาร)
+  const completedRequests = myRequests.filter(r =>
+    ['scheduled', 'completed', 'rejected'].includes(r.status)
+  );
 
   // 🎨 ฟังก์ชันกำหนดสไตล์ให้ NavLink เปลี่ยนสีเมื่อ URL ตรงกับเมนู
   const navLinkStyle = ({ isActive }) => 
