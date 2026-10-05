@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginUI from './components/auth/LoginUi'; // หรือตำแหน่ง LoginUI ของคุณ
+import LoginUI from './components/auth/LoginUi'; 
 import AdminLandingPage from './components/AdminLandingPage';
+import NotFound from './components/auth/NotFound'; // 📌 นำเข้า NotFound
 
 export default function MainApp() {
   const [role, setRole] = useState('admin');
@@ -50,21 +52,42 @@ export default function MainApp() {
     setCurrentAdmin(null);
   };
 
-  if (currentAdmin) {
-    return <AdminLandingPage user={currentAdmin} onLogout={handleLogout} />;
-  }
-
   return (
-    <LoginUI
-      role={role}
-      setRole={setRole}
-      username={username}
-      setUsername={setUsername}
-      password={password}
-      setPassword={setPassword}
-      loading={loading}
-      error={error}
-      handleSubmit={handleSubmit}
-    />
+    <BrowserRouter>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            currentAdmin ? (
+              <Navigate to="/home" replace />
+            ) : (
+              <LoginUI
+                role={role}
+                setRole={setRole}
+                username={username}
+                setUsername={setUsername}
+                password={password}
+                setPassword={setPassword}
+                loading={loading}
+                error={error}
+                handleSubmit={handleSubmit}
+              />
+            )
+          } 
+        />
+
+        {/* 📌 หน้า Dashboard Admin (ใช้ /* เพื่อครอบคลุม URL ย่อย) */}
+        <Route 
+          path="/*" 
+          element={
+            currentAdmin ? (
+              <AdminLandingPage user={currentAdmin} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

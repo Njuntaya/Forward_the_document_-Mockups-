@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginUI from './components/auth/LoginUi'; // ปรับตาม path ของคอมโพเนนต์ Login ของคุณ
+
+import LoginUI from './components/auth/LoginUi'; 
 import StudentDashboard from './components/dashboard/StudentDashboard';
+import NotFound from './components/auth/NotFound'; // 📌 เพิ่มหน้า NotFound
 
 export default function MainApp() {
   const [role, setRole] = useState('user');
@@ -10,7 +13,7 @@ export default function MainApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 🛡️ Safe LocalStorage การันตีไม่ให้เกิดจอขาวเวลาเรนเดอร์ครั้งแรก
+  // 🛡️ ดึงข้อมูล User จาก LocalStorage ตอนโหลดหน้าเว็บ
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('user');
@@ -23,6 +26,7 @@ export default function MainApp() {
     return null;
   });
 
+  // ฟังก์ชันจัดการ Login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -53,28 +57,56 @@ export default function MainApp() {
     }
   };
 
+  // ฟังก์ชันจัดการ Logout
   const handleLogout = () => {
     localStorage.removeItem('user');
     setCurrentUser(null);
   };
 
-  // ถ้ามีข้อมูล User อยู่แล้ว ให้พาเข้า Dashboard ทันที
-  if (currentUser) {
-    return <StudentDashboard user={currentUser} onLogout={handleLogout} />;
-  }
-
-  // ถ้ายังไม่ล็อกอิน ให้แสดงหน้า Login ปกติ
   return (
-    <LoginUI
-      role={role}
-      setRole={setRole}
-      username={username}
-      setUsername={setUsername}
-      password={password}
-      setPassword={setPassword}
-      loading={loading}
-      error={error}
-      handleSubmit={handleSubmit}
-    />
+    <BrowserRouter>
+      <Routes>
+        
+        {/* 📌 1. Route: หน้า Login */}
+        <Route 
+          path="/login" 
+          element={
+            currentUser ? (
+              <Navigate to="/" replace /> 
+            ) : (
+              <LoginUI
+                role={role}
+                setRole={setRole}
+                username={username}
+                setUsername={setUsername}
+                password={password}
+                setPassword={setPassword}
+                loading={loading}
+                error={error}
+                handleSubmit={handleSubmit}
+              />
+            )
+          } 
+        />
+
+        {/* 📌 2. Route: หน้าหลัก (Dashboard) และเมนูย่อยทั้งหมด */}
+        {/* ใช้ /* เพื่อให้รับ URL ย่อยอย่าง /new-request หรือ /tracking ได้ */}
+        <Route 
+          path="/*" 
+          element={
+            currentUser ? (
+              <StudentDashboard user={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+
+        {/* 📌 3. Route: หน้าต่าง 404 แจ้งเตือนเมื่อไม่พบหน้าเว็บ */}
+        {/* วางไว้ล่างสุดเสมอ เพื่อดักจับ URL ที่ไม่มีในระบบ */}
+        <Route path="*" element={<NotFound />} />
+
+      </Routes>
+    </BrowserRouter>
   );
 }
